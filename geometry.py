@@ -229,8 +229,8 @@ class Ellipse:
         dy = self.c * math.sin(math.radians(self.incl))
         dx = self.c * math.cos(math.radians(self.incl))
         delta=Pos(dx,dy)
-        self._center=pos+delta
-        self._focus2=self._center+delta
+        self._center=pos-delta
+        self._focus2=self._center-delta
 
     @property
     def focus2(self):
@@ -241,8 +241,8 @@ class Ellipse:
         dy = self.c * math.sin(math.radians(self.incl))
         dx = self.c * math.cos(math.radians(self.incl))
         delta=Pos(dx,dy)
-        self._center=pos-delta
-        self._focus1=self._center-delta
+        self._center=pos+delta
+        self._focus1=self._center+delta
 
     @property
     def center(self):

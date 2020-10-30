@@ -1,7 +1,7 @@
 from geometry import *
 from display import *
 import pygame as pg
-#from fspace import *
+from fspace import *
 
 done=False
 
@@ -29,7 +29,6 @@ def draw():
 
     e=Ellipse(a=4,b=2,center=Pos(0,0),incl=30)
     earea=e.area
-    print(earea)
     x=earea.left
 
     while x<=earea.right:
@@ -62,9 +61,6 @@ def draw():
     #path_conv=[Display.trans(p,area) for p in path]
     #Display.draw_path(path_conv)
 
-
-    pass
-
     # ps=e.intersect_points_with_rect(r)
     # print("x")
     # for p in ps['x']:
@@ -90,79 +86,22 @@ def draw():
     #     print(a)
 
 
-# e=Ellipse(100,40,Pos(0,0))
-# print(e)
-# e.incl=30
-# print(e)
-#exit(0)
+#
+Sol=Sun(name="sol",mass=1.989E+30,radius=696E+6)
+T=Planet(primary=Sol,name="Earth",mass=5.97E+24, radius=6.38E+6, apo=1.47E+11, peri=1.52E+11,\
+         incl=0,init_pos=0)
+print(T)
+print(T.T/3600/24)
+print(T.time/3600/24)
+(pos,time)=T.pos_at_angle(180)
+print(T.T/3600/24)
+print(time/3600/24)
+
+exit(0)
+
 
 Display = Display(1024)
 run()
 print("weeey")
 exit(0)
 
-class A:
-    def __init__(self):
-        self._a=0
-
-    @property
-    def a(self):
-        return self._a
-
-class B(A):
-    def __init__(self):
-        pass
-
-    @A.a.setter
-    def a(self,v):
-        self._a=v
-
-test=B()
-B.a=99
-print(B.a)
-
-exit(0)
-
-
-p=Pos(0,0)
-e=Ellipse(center=p,a=20,b=20,incl=0)
-print(e)
-q=Pos(20,20)
-e.center=q
-print(e)
-f=Pos(-6.770509831248425,-9.68245836551854)
-e.focus1=f
-print(e)
-e.a=100
-print(e)
-
-exit(0)
-
-Sol=Body()
-Sol.mass = 1e6
-Sol.radius = 10000
-Sol.pos = Pos(0, 0)
-
-P=Body()
-P.mass=1e4
-P.radius=1000
-o=Orbit(10,10,30)
-P.set_orbit(o,Sol)
-# print(o)
-#
-# t=o.intersects_X(5)
-# print(t)
-# t=o.intersects_Y(-5)
-# print(t)
-
-a=Rectangle(0,0,200,100)
-b=Rectangle(-10,-10,1000,1000)
-print(a)
-print(b)
-print(a.intersects_X(b))
-print(b.intersects_X(a))
-
-
-# R=Rectangle(-20,200,100,200)
-# t=R.overlap(o.area())
-# print(t)
