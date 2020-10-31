@@ -5,6 +5,7 @@ import math
 SCREEN_RATIO = 0.75  # 4:3
 
 WHITE = (200, 200, 200)
+GRAY = (50,50,50)
 LINE_WIDTH = 1
 
 
@@ -46,8 +47,8 @@ class Display:
         p=self.trans(pos,area)
         self.draw_point(p)
 
-    def draw_circle(self, Pos, radius):
-        pg.draw.circle(self.screen, WHITE, Pos.coords(), radius, LINE_WIDTH)
+    def draw_circle(self, Pos, radius, linewidth=0):
+        pg.draw.circle(self.screen, WHITE, Pos.coords(), radius, linewidth)
 
     def draw_Xmarks_cartesian(self,k,area):
         step=self.WIDTH/area.width
@@ -161,12 +162,12 @@ class Display:
         # corner_pos+=pos
 
 
-    def draw_path(self,path):
+    def draw_path(self,path,color=GRAY):
         p1=path.pop()
         while path:
             p2=path.pop()
             if self.belongs(p1.x,p1.y) or self.belongs(p2.x,p2.y):
-                pg.draw.line(self.screen, WHITE, p1.coords(), p2.coords(), LINE_WIDTH)
+                pg.draw.line(self.screen, color, p1.coords(), p2.coords(), LINE_WIDTH)
             p1=p2
 
     def draw_ex(self,pos):

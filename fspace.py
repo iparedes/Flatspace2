@@ -21,7 +21,8 @@ class Body:
     @pos.setter
     def pos(self,p):
         self._pos=p
-        #todo Needs to update the positions (focus) of the orbits of all satellites
+        for s in self.satellites:
+            s.orbit.focus=p
 
     @property
     # returns the area of flatspace that the element is occupying
@@ -93,6 +94,11 @@ class Body:
     # updates the pos of the body in the orbit according to a delta in seconds
     def update_pos(self,delta):
         self.set_pos_time(self.time+delta)
+        for s in self.satellites:
+            s.set_pos_time(self.time+delta)
+
+    def add_satellite(self,s):
+        self.satellites.append(s)
 
 class Sun(Body):
     def __init__(self, name="", mass=0, pos=None, radius=0):
@@ -102,7 +108,7 @@ class Sun(Body):
         self.pos=Pos(0,0)
 
     def add_planet(self, planet):
-        self.satellites.append(planet)
+        self.add_satellite(planet)
 
     @property
     def area(self):
@@ -134,6 +140,7 @@ class Planet(Body):
         height = width
         R = Rectangle(left, top, width, height)
         return R
+
 
 
 class Orbit():
@@ -168,6 +175,9 @@ class Orbit():
     @property
     def focus(self):
         return self.ellipse.focus1
+    @focus.setter
+    def focus(self,pos):
+        self.ellipse.focus1=pos
 
     @property
     def center(self):

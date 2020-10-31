@@ -1,7 +1,7 @@
 from geometry import *
 
 PATH_RESOLUTION=100
-EPSILON=10E-9 # small number used to avoid non existing values in the ellipse when calculating in the border of its area
+EPSILON=10E-1 # small number used to avoid non existing values in the ellipse when calculating in the border of its area
 DEFAULT_PLANET_RADIUS=5 # radius to draw when the planet is too small to be seen
 DEFAULT_SUN_RADIUS=10 # radius to draw when the planet is too small to be seen
 
@@ -63,6 +63,14 @@ class View:
         if radius==0:
             radius=DEFAULT_PLANET_RADIUS
         self.display.draw_circle(pos, radius)
+
+    def draw_satellite(self,planet):
+        pos=self.trans(planet.pos)
+        radius=int(planet.radius/self.mperpixel)
+        if radius==0:
+            radius=DEFAULT_PLANET_RADIUS
+        self.display.draw_circle(pos, radius)
+
 
     def draw_sun(self,sun):
         pos=self.trans(sun.pos)

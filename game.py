@@ -52,6 +52,7 @@ class Game(object):
     def load_data(self):
         file1 = open(DATA_FILE, 'r')
         Lines = file1.readlines()
+        lastPlanet=None
         for l in Lines:
             l.strip()
             if l[0] != '#':
@@ -61,6 +62,16 @@ class Game(object):
                     self.SS.Sol.mass = float(items[1])
                     self.SS.Sol.radius = float(items[2])
                     self.SS.Sol.pos = Pos(0, 0)
+                elif items[0] == "*": # Satellite
+                    name=items[1]
+                    mass=float(items[2])
+                    radius = float(items[3])
+                    peri = float(items[4])
+                    apo = float(items[5])
+                    incl = float(items[6])
+                    pos = float(items[7])
+                    s=Planet(lastPlanet,name,mass,radius,peri,apo,incl,pos)
+                    lastPlanet.add_satellite(s)
                 else:
                     name=items[0]
                     mass=float(items[1])
@@ -74,6 +85,7 @@ class Game(object):
                         self.max_peri=peri
                     #self.SS.add_planet(name,mass,radius,peri,apo,incl,pos)
                     P=Planet(self.SS.Sol,name,mass,radius,peri,apo,incl,pos)
+                    lastPlanet=P
                     self.SS.Sol.add_planet(P)
 
 
@@ -85,10 +97,13 @@ class Game(object):
             if self.View.in_view(p):
                 self.View.draw_planet(p)
             # draw orbit
-            #print(self.View.area)
-            #print(p.orbit.area)
             if self.View.area.overlap(p.orbit.area):
                 self.View.draw_orbit(p.orbit)
+            for s in p.satellites:
+                if self.View.in_view(p):
+                    self.View.draw_satellite(s)
+                if self.View.area.overlap(s.orbit.area):
+                    self.View.draw_orbit(s.orbit)
 
 
 

@@ -1,0 +1,5 @@
+# Sun, name has to be Sun
+# mass,radius
+Sun, 1.989E+30,696E+6
+# Planets
+Pepon, 10e90, 10e8, 1.47e11,1.47e13,0,0
