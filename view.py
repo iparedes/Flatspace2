@@ -4,6 +4,7 @@ PATH_RESOLUTION=100
 EPSILON=10E-1 # small number used to avoid non existing values in the ellipse when calculating in the border of its area
 DEFAULT_PLANET_RADIUS=5 # radius to draw when the planet is too small to be seen
 DEFAULT_SUN_RADIUS=10 # radius to draw when the planet is too small to be seen
+DEFAULT_SHIP_SIZE=10
 
 # Defines an area in the flatspace with cartesian coordinates
 class View:
@@ -57,6 +58,37 @@ class View:
         yp = int((self.display.HEIGHT/self.area.height)*(self.area.top-pos.y))
         return Pos(xp, yp)
 
+    def draw_ship(self,s):
+        # Creates the body of the ship
+        r = Rectangle(0, 0, 100, 100)
+        # Moves the body to match the position of the ship
+        r.center = s.pos
+        # Translates the coordinates of the body
+        # uses both corners to determine the width and height translated
+        topleft=self.trans(Pos(r.left,r.top))
+        bottomright=self.trans(Pos(r.right,r.bottom))
+        w=bottomright.x-topleft.x
+        h=bottomright.y-topleft.y
+        # Draws the body of the ship in the Display
+        if w<50:
+            centerx=topleft.x+(w/2)
+            centery=topleft.y+(h/2)
+            newx=centerx-(DEFAULT_SHIP_SIZE/2)
+            newy=centery-(DEFAULT_SHIP_SIZE/2)
+            self.display.draw_rectangle((newx,newy),DEFAULT_SHIP_SIZE,DEFAULT_SHIP_SIZE)
+        else:
+            self.display.draw_rectangle(topleft.coords(),w,h)
+        # Draws the velocity vector
+        alfa=s.velocity.direction_radians
+        x2=20*math.cos(alfa)
+        y2=20*math.sin(alfa)
+        pos1=self.trans(s.pos)
+        pos2=pos1+Pos(x2,-zzzzy2)
+        #pos2=s.pos+Pos(x2,y2)
+        #pos2=self.trans(pos2)
+        self.display.draw_line(pos1,pos2)
+
+
     def draw_planet(self,planet):
         pos=self.trans(planet.pos)
         radius=int(planet.radius/self.mperpixel)
@@ -77,7 +109,7 @@ class View:
         radius=int(sun.radius/self.mperpixel)
         if radius==0:
             radius=DEFAULT_SUN_RADIUS
-        self.display.draw_circle(pos, radius)
+        self.display.draw_circle(pos, radius,1)
 
     def draw_orbit(self,orbit):
         ellipse=orbit.ellipse

@@ -1,7 +1,7 @@
 import math
 from geometry import *
 
-G = 6.674E-11  # m•k-1•s-2.
+G = 6.674E-11  # m3•k-1•s-2.
 
 # everything in the universe (planets, ships, ...)
 class Body:
@@ -199,12 +199,55 @@ class SSystem:
         self.Sol = Sun()
         self.epoch=0
         self.days=0
+        self.ships=[]
 
     def update(self,delta):
         self.epoch+=delta
-        print("delta: "+str(delta))
+        #print("delta: "+str(delta))
         if(self.epoch/86400>self.days):
             self.days+=1
-            print(str(self.days)+" days")
+            #print(str(self.days)+" days")
         for p in self.Sol.satellites:
             p.update_pos(delta)
+        for s in self.ships:
+            s.update_pos(delta)
+
+
+# A body that is not on rails
+class Ship:
+    def __init__(self,primary=None,name="",mass=0,pos=Pos(0,0)):
+        self.primary=primary
+        self.name=name
+        self.mass=mass
+        self.pos=pos
+        self.velocity=Vector(Pos(0,0))
+
+    def update_pos(self,delta):
+        # Calculates the magnitud of the gravitational force
+        f=self.Fg()
+        # the vector has origin in the ship and points to the center of the primary
+        # all our vectors have origin at (0,0) so we calculate de vector at (0,0) that
+        # has the right magnitude and direction
+        vector=Vector(self.primary.pos-self.pos)
+        vector.magnitude=f
+        self.velocity+=vector
+        shift=Pos(self.velocity.x*delta,self.velocity.y*delta)
+        self.pos+=shift
+        print(self.velocity)
+
+    def Fg(self):
+        d=self.pos.distance(self.primary.pos)
+        f=G*(self.primary.mass/(d**2))
+        return f
+
+    @property
+    def area(self):
+        # todo: by now all ships have 10x10m
+        side=10
+        left = self.pos.x - side
+        top = self.pos.y + side
+        width = side
+        height = width
+        R = Rectangle(left, top, width, height)
+        return R
+

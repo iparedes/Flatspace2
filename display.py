@@ -47,8 +47,15 @@ class Display:
         p=self.trans(pos,area)
         self.draw_point(p)
 
-    def draw_circle(self, Pos, radius, linewidth=0):
-        pg.draw.circle(self.screen, WHITE, Pos.coords(), radius, linewidth)
+    def draw_circle_cartesian(self, pos, radius, area):
+        p=self.trans(pos,area)
+        ratio = area.width / self.WIDTH
+        rad=int(radius/ratio)
+        self.draw_circle(p,rad)
+
+
+    def draw_circle(self, pos, radius, linewidth=0):
+        pg.draw.circle(self.screen, WHITE, pos.coords(), radius, linewidth)
 
     def draw_Xmarks_cartesian(self,k,area):
         step=self.WIDTH/area.width
@@ -72,6 +79,8 @@ class Display:
             pg.draw.line(self.screen,WHITE,p1.coords(),p2.coords(),LINE_WIDTH)
             y-=1
 
+    def draw_line(self,p1,p2):
+        pg.draw.line(self.screen,WHITE,p1.coords(),p2.coords(),LINE_WIDTH)
 
     def draw_line_cartesian(self,pos1,pos2,area):
         p1=self.trans(pos1,area)
@@ -87,8 +96,9 @@ class Display:
         self.draw_rectangle(new_r)
 
 
-    def draw_rectangle(self, rect):
-        pg.draw.rect(self.screen, WHITE, rect, LINE_WIDTH)
+    def draw_rectangle(self, topleft,width,height):
+        r=pg.Rect(topleft,(width,height))
+        pg.draw.rect(self.screen, WHITE, r, LINE_WIDTH)
 
 
     def draw_ellipse_cartesian(self, ellipse, area):

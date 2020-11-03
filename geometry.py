@@ -13,8 +13,27 @@ class Pos:
     def __add__(self, other):
         return Pos(self.x+other.x,self.y+other.y)
 
+    def __iadd__(self, other):
+        self.x += other.x
+        self.y += other.y
+        return self
+
     def __sub__(self, other):
         return Pos(self.x-other.x,self.y-other.y)
+
+    def __isub__(self, other):
+        self.x -= other.x
+        self.y -= other.y
+        return self
+
+    # Multiply both coordinates by a value
+    def __rmul__(self, other):
+        return Pos(self.x * other,self.y * other)
+
+    # Multiply both coordinates by a value
+    def __mul__(self, other):
+        return Pos(self.x * other,self.y * other)
+
 
     def coords(self):
         return (self.x,self.y)
@@ -22,6 +41,97 @@ class Pos:
     def distance(self,other):
         return math.sqrt(((self.x-other.x)**2)+((self.y-other.y)**2))
 
+class Vector(Pos):
+    # needs either a pos (assumes origin at (0,0) or magnitud+dir
+    def __init__(self,pos=Pos(0,0),magnitud=0,dir=0):
+        if magnitud==0:
+            Pos.__init__(self,pos.x, pos.y)
+        else:
+            xp = magnitud * math.cos(math.radians(dir))
+            yp = magnitud * math.sin(math.radians(dir))
+            Pos.__init__(self,xp,yp)
+
+    def __str__(self):
+        t="->"+Pos.__str__(self)
+        t+="Mag: "+str(self.magnitude)+" Dir: "+str(self.direction)+"\n"
+        return t
+
+    def __add__(self, other):
+        p=Pos.__add__(self,other)
+        return Vector(p)
+
+    def __iadd__(self, other):
+        Pos.__iadd__(self, other)
+        return self
+
+    def __sub__(self, other):
+        p=Pos.__sub__(self,other)
+        return Vector(p)
+
+    def __isub__(self, other):
+        Pos.__isub__(self, other)
+        return self
+
+    # Multiplies vector by scalar
+    def __mul__(self, other):
+        p=Pos.__rmul__(self,other)
+        return Vector(p)
+
+    # Multiplies vector by scalar
+    def __rmul__(self, other):
+        p=Pos.__rmul__(self,other)
+        return Vector(p)
+
+    @property
+    def pos(self):
+        return Pos(self.x,self.y)
+
+    @property
+    def magnitude(self):
+        v=math.sqrt((self.x)**2 + (self.y)**2)
+        return v
+
+    # Modifies the magnitud of the vector maintaining the origin
+    @magnitude.setter
+    def magnitude(self,v):
+        alfa=self.direction_radians
+        xp=v*math.cos(alfa)
+        yp=v*math.sin(alfa)
+        self.x=xp
+        self.y=yp
+
+    @property
+    def direction(self):
+        v=self.direction_radians
+        return math.degrees(v)
+
+    @property
+    def direction_radians(self):
+        if self.x==0:
+            if self.y>0:
+                v=math.pi/2
+            elif self.y<0:
+                v=3*math.pi/2
+            else:
+                v=0 # special case where there is no vector (magnitude 0)
+        elif self.y==0:
+            if self.x>0:
+                v=0
+            else: # x<0
+                v=math.pi
+        else:
+            alfa=math.atan(abs(self.y)/abs(self.x))
+            if self.x>0:
+                if self.y>0:
+                    v=alfa
+                else:
+                    v=(2*math.pi)-alfa
+            else: # x<0
+                if self.y>0:
+                    v=math.pi-alfa
+                else:
+                    v=alfa+math.pi
+        return v
 
 # the reference frame for the rectangle is Cartesian
 class Rectangle:
@@ -441,8 +551,6 @@ class Ellipse:
             return(valYmenos+self.center.y,valYmas+self.center.y)
         else:
             return None
-
-
 
 
 

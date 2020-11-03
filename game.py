@@ -4,11 +4,10 @@ from display import *
 from geometry import *
 from fspace import *
 import pygame as pg
-import cProfile
 
-DATA_FILE='data'
+DATA_FILE='data3'
 
-ZOOM_FACTOR = 10
+ZOOM_FACTOR = 25
 MOVE_FACTOR = 10
 TIME_RATE=[1,10,100,1000,10000,1e5,1e6]
 FPS = 10
@@ -25,6 +24,11 @@ class Game(object):
         self.Display = Display(1024)
         # sets the view with the sun in the center to accommodate to see complete the largest orbit
         # it is not totally correct as it assumes that the orbit is horizontal in the ref. coords
+
+        # Ojo here. Only for data3 ##########
+        self.max_apo=1e8
+        #####################################
+
         self.View=View(self.Display,width=(self.max_apo*2.05))
         #self.View = View(self.Display, width=800)
         center=Pos(0,0)
@@ -44,6 +48,7 @@ class Game(object):
         self.time_rate_index+=1
         if self.time_rate_index==len(TIME_RATE):
             self.time_rate_index=0
+        print("Time rate index: "+str(self.time_rate_index))
 
         milispertick=1000/FPS
         deltasecs=(milispertick/1000)*TIME_RATE[self.time_rate_index]
@@ -72,6 +77,14 @@ class Game(object):
                     pos = float(items[7])
                     s=Planet(lastPlanet,name,mass,radius,peri,apo,incl,pos)
                     lastPlanet.add_satellite(s)
+                elif items[0] == "&": # ship
+                    name=items[1]
+                    mass=float(items[2])
+                    x = float(items[3])
+                    y = float(items[4])
+                    s=Ship(self.SS.Sol,name,mass,Pos(x,y))
+                    s.velocity=Vector(Pos(0,800))
+                    self.SS.ships.append(s)
                 else:
                     name=items[0]
                     mass=float(items[1])
@@ -91,6 +104,8 @@ class Game(object):
 
     def draw(self):
         self.Display.screen.fill((0, 0, 0))
+        # remove *************
+        #self.Display.draw_line_cartesian(Pos(self.View.area.left, 0), Pos(self.View.area.right, 0), self.View.area)
         if self.View.in_view(self.SS.Sol):
             self.View.draw_sun(self.SS.Sol)
         for p in self.SS.Sol.satellites:
@@ -104,9 +119,9 @@ class Game(object):
                     self.View.draw_satellite(s)
                 if self.View.area.overlap(s.orbit.area):
                     self.View.draw_orbit(s.orbit)
-
-
-
+        for s in self.SS.ships:
+            if self.View.in_view(s):
+                self.View.draw_ship(s)
 
     # Handles events
     def event_loop(self):
@@ -138,7 +153,9 @@ class Game(object):
     def run(self):
         while not self.done:
             self.event_loop()
-            self.dt = self.clock.tick(FPS)/1000
+            self.clock.tick(FPS)
+            # instead of getting the ticks from clock.tick. I assume it works fine and calculate directly
+            # mmmmm, doesn't look right
             self.dt=1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
             self.SS.update(self.dt)
