@@ -9,7 +9,7 @@ DATA_FILE='data3'
 
 ZOOM_FACTOR = 25
 MOVE_FACTOR = 10
-TIME_RATE=[1,10,100,1000,10000,1e5,1e6]
+TIME_RATE=[0,1,10,100,1000,10000,1e5,1e6]
 FPS = 10
 
 class Game(object):
@@ -47,7 +47,7 @@ class Game(object):
     def update_time_rate(self):
         self.time_rate_index+=1
         if self.time_rate_index==len(TIME_RATE):
-            self.time_rate_index=0
+            self.time_rate_index=1
         print("Time rate index: "+str(self.time_rate_index))
 
         milispertick=1000/FPS
@@ -143,6 +143,12 @@ class Game(object):
                     self.View.zoom(-ZOOM_FACTOR)
                 if event.key == pg.K_t:
                     self.update_time_rate()
+                if event.key == pg.K_p:
+                    if self.time_rate_index!=0:
+                        self.time_rate_index=0
+                    else:
+                        self.time_rate_index = 1
+
 
 # En cada tick se actualiza el sistema.
 # A 10 FPS el sistema se actualiza 10 veces por segundo, por tanto, el delta es 100ms
@@ -158,7 +164,9 @@ class Game(object):
             # mmmmm, doesn't look right
             self.dt=1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
-            self.SS.update(self.dt)
+            print(self.dt)
+            if self.time_rate_index!=0:
+                self.SS.update(self.dt)
             self.draw()
             pg.display.update()
         pg.quit()

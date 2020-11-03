@@ -83,7 +83,7 @@ class View:
         x2=20*math.cos(alfa)
         y2=20*math.sin(alfa)
         pos1=self.trans(s.pos)
-        pos2=pos1+Pos(x2,-zzzzy2)
+        pos2=pos1+Pos(x2,-y2)
         #pos2=s.pos+Pos(x2,y2)
         #pos2=self.trans(pos2)
         self.display.draw_line(pos1,pos2)

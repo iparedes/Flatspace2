@@ -201,6 +201,7 @@ class SSystem:
         self.days=0
         self.ships=[]
 
+    # updates delta milliseconds
     def update(self,delta):
         self.epoch+=delta
         #print("delta: "+str(delta))
@@ -209,8 +210,15 @@ class SSystem:
             #print(str(self.days)+" days")
         for p in self.Sol.satellites:
             p.update_pos(delta)
-        for s in self.ships:
-            s.update_pos(delta)
+        if delta>=1000:
+            cont=0
+            while cont<=delta:
+                for s in self.ships:
+                    s.update_pos(100)
+                cont+=100
+        else:
+            for s in self.ships:
+                s.update_pos(delta)
 
 
 # A body that is not on rails
