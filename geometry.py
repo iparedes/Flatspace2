@@ -42,14 +42,36 @@ class Pos:
         return math.sqrt(((self.x-other.x)**2)+((self.y-other.y)**2))
 
 class Vector(Pos):
-    # needs either a pos (assumes origin at (0,0) or magnitud+dir
-    def __init__(self,pos=Pos(0,0),magnitud=0,dir=0):
-        if magnitud==0:
-            Pos.__init__(self,pos.x, pos.y)
+
+    # Constructors
+    # Pos
+    # x,y
+    # magnitud+dir
+    def __init__(self,**kwargs):
+        if 'pos' in kwargs:
+            pos=kwargs['pos']
+            Pos.__init__(self, pos.x, pos.y)
+        elif 'x' and 'y' in kwargs:
+            x=kwargs['x']
+            y=kwargs['y']
+            Pos.__init__(self,x,y)
         else:
-            xp = magnitud * math.cos(math.radians(dir))
-            yp = magnitud * math.sin(math.radians(dir))
+            mag=kwargs['magnitud']
+            dir=kwargs['dir']
+            xp = mag * math.cos(math.radians(dir))
+            yp = mag * math.sin(math.radians(dir))
             Pos.__init__(self,xp,yp)
+
+    # needs either a pos (assumes origin at (0,0) or magnitud+dir
+    # def __init__(self,pos=Pos(0,0),magnitud=0,dir=0):
+    #     if magnitud==0:
+    #         Pos.__init__(self,pos.x, pos.y)
+    #     else:
+    #         xp = magnitud * math.cos(math.radians(dir))
+    #         yp = magnitud * math.sin(math.radians(dir))
+    #         Pos.__init__(self,xp,yp)
+
+
 
     def __str__(self):
         t="->"+Pos.__str__(self)

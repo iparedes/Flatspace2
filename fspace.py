@@ -201,7 +201,6 @@ class SSystem:
         self.days=0
         self.ships=[]
 
-    #test
     # updates delta milliseconds
     def update(self,delta):
         self.epoch+=delta
@@ -224,12 +223,15 @@ class SSystem:
 
 # A body that is not on rails
 class Ship:
-    def __init__(self,primary=None,name="",mass=0,pos=Pos(0,0)):
+    def __init__(self,primary=None,name="",mass=0,pos=Pos(0,0),vel=None):
         self.primary=primary
         self.name=name
         self.mass=mass
         self.pos=pos
-        self.velocity=Vector(Pos(0,0))
+        if vel==None:
+            self.velocity=Vector(Pos(0,0))
+        else:
+            self.velocity=vel
 
     def update_pos(self,delta):
         # Calculates the magnitud of the gravitational force
@@ -237,7 +239,8 @@ class Ship:
         # the vector has origin in the ship and points to the center of the primary
         # all our vectors have origin at (0,0) so we calculate de vector at (0,0) that
         # has the right magnitude and direction
-        vector=Vector(self.primary.pos-self.pos)
+        pos=self.primary.pos-self.pos
+        vector=Vector(pos=pos)
         vector.magnitude=f
         self.velocity+=vector
         shift=Pos(self.velocity.x*delta,self.velocity.y*delta)

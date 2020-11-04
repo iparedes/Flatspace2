@@ -5,10 +5,14 @@ from geometry import *
 from fspace import *
 import pygame as pg
 
-DATA_FILE='data3'
+DATA_FILE='data'
 
 ZOOM_FACTOR = 25
 MOVE_FACTOR = 10
+
+# The time rate is multiplied by the dt
+# the dt are milliseconds calculated dividing one second between the FPS
+# the default time rate (1) are 100ms per update
 TIME_RATE=[0,1,10,100,1000,10000,1e5,1e6]
 FPS = 10
 
@@ -26,7 +30,7 @@ class Game(object):
         # it is not totally correct as it assumes that the orbit is horizontal in the ref. coords
 
         # Ojo here. Only for data3 ##########
-        self.max_apo=1e8
+        #self.max_apo=1e8
         #####################################
 
         self.View=View(self.Display,width=(self.max_apo*2.05))
@@ -82,8 +86,11 @@ class Game(object):
                     mass=float(items[2])
                     x = float(items[3])
                     y = float(items[4])
-                    s=Ship(self.SS.Sol,name,mass,Pos(x,y))
-                    s.velocity=Vector(Pos(0,800))
+                    xvel = float(items[5])
+                    yvel = float(items[6])
+                    vel=Vector(x=xvel,y=yvel)
+                    # todo add velocity vector in ship constructor
+                    s=Ship(self.SS.Sol,name,mass,Pos(x,y),vel)
                     self.SS.ships.append(s)
                 else:
                     name=items[0]
@@ -162,7 +169,7 @@ class Game(object):
             self.clock.tick(FPS)
             # instead of getting the ticks from clock.tick. I assume it works fine and calculate directly
             # mmmmm, doesn't look right
-            self.dt=1000/FPS # milliseconds per frame
+            self.dt = 1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
             print(self.dt)
             if self.time_rate_index!=0:
