@@ -245,7 +245,7 @@ class Ship:
         self.velocity+=vector
         shift=Pos(self.velocity.x*delta,self.velocity.y*delta)
         self.pos+=shift
-        print(self.velocity)
+        #print(self.velocity)
 
     def Fg(self):
         d=self.pos.distance(self.primary.pos)

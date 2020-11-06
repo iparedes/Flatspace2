@@ -4,6 +4,7 @@ from display import *
 from geometry import *
 from fspace import *
 import pygame as pg
+import pygame_textinput
 
 DATA_FILE='data'
 
@@ -16,6 +17,8 @@ MOVE_FACTOR = 10
 TIME_RATE=[0,1,10,100,1000,10000,1e5,1e6]
 FPS = 10
 
+CONSOLE_MARGIN=10
+
 class Game(object):
     def __init__(self):
         self.done = False
@@ -26,6 +29,10 @@ class Game(object):
         self.load_data()
         self.clock = pg.time.Clock()
         self.Display = Display(1024)
+
+        self.console=pygame_textinput.TextInput(initial_string="",font_size=14,text_color=(255,255,255))
+        self.console_active=False
+        self.console_area=pg.Rect(CONSOLE_MARGIN,self.Display.HEIGHT-self.console.font_size,self.Display.WIDTH-(CONSOLE_MARGIN*2),self.console.font_size)
         # sets the view with the sun in the center to accommodate to see complete the largest orbit
         # it is not totally correct as it assumes that the orbit is horizontal in the ref. coords
 
@@ -48,15 +55,25 @@ class Game(object):
         # self.View.draw_planet(P)
         # self.View.draw_orbit(O)
 
+    # returns True if point inside rect
+    # rect is pg.Rect, point is a (x,y) tuple
+    def is_inside(self,rect,point):
+        x=point[0]
+        y=point[1]
+        if (rect.left<=x<=rect.right) and (rect.top<=y<=rect.bottom):
+            return True
+        else:
+            return False
+
     def update_time_rate(self):
         self.time_rate_index+=1
         if self.time_rate_index==len(TIME_RATE):
             self.time_rate_index=1
-        print("Time rate index: "+str(self.time_rate_index))
+        #print("Time rate index: "+str(self.time_rate_index))
 
         milispertick=1000/FPS
         deltasecs=(milispertick/1000)*TIME_RATE[self.time_rate_index]
-        print("Delta per tick: "+str(deltasecs))
+        #print("Delta per tick: "+str(deltasecs))
 
     def load_data(self):
         file1 = open(DATA_FILE, 'r')
@@ -111,6 +128,8 @@ class Game(object):
 
     def draw(self):
         self.Display.screen.fill((0, 0, 0))
+        pg.draw.rect(self.Display.screen,(16,16,16),self.console_area)
+        self.Display.screen.blit(self.console.get_surface(), (self.console_area.left,self.console_area.top))
         # remove *************
         #self.Display.draw_line_cartesian(Pos(self.View.area.left, 0), Pos(self.View.area.right, 0), self.View.area)
         if self.View.in_view(self.SS.Sol):
@@ -130,31 +149,53 @@ class Game(object):
             if self.View.in_view(s):
                 self.View.draw_ship(s)
 
+
     # Handles events
     def event_loop(self):
-        for event in pg.event.get():
+        events=pg.event.get()
+        #for event in events:
+        while events:
+            event=events.pop(0)
             if event.type == pg.QUIT:
                 self.done = True
             if event.type == pg.KEYDOWN:
-                if event.key == pg.K_LEFT:
-                    self.View.move(-MOVE_FACTOR, 0)
-                if event.key == pg.K_RIGHT:
-                    self.View.move(MOVE_FACTOR, 0)
-                if event.key == pg.K_UP:
-                    self.View.move(0,MOVE_FACTOR)
-                if event.key == pg.K_DOWN:
-                    self.View.move(0,-MOVE_FACTOR)
-                if event.key == pg.K_z:
-                    self.View.zoom(ZOOM_FACTOR)
-                if event.key == pg.K_x:
-                    self.View.zoom(-ZOOM_FACTOR)
-                if event.key == pg.K_t:
-                    self.update_time_rate()
-                if event.key == pg.K_p:
-                    if self.time_rate_index!=0:
-                        self.time_rate_index=0
-                    else:
-                        self.time_rate_index = 1
+                print(events)
+                if self.console_active:
+                    events.insert(0,event)
+                    if self.console.update(events):
+                        # pressed enter
+                        t=self.console.get_text()
+                        self.console.clear_text()
+                        self.console.get_surface().fill((0,0,0))
+                        print(t)
+                    #break
+                else:
+                    if event.key == pg.K_LEFT:
+                        self.View.move(-MOVE_FACTOR, 0)
+                    if event.key == pg.K_RIGHT:
+                        self.View.move(MOVE_FACTOR, 0)
+                    if event.key == pg.K_UP:
+                        self.View.move(0,MOVE_FACTOR)
+                    if event.key == pg.K_DOWN:
+                        self.View.move(0,-MOVE_FACTOR)
+                    if event.key == pg.K_z:
+                        self.View.zoom(ZOOM_FACTOR)
+                    if event.key == pg.K_x:
+                        self.View.zoom(-ZOOM_FACTOR)
+                    if event.key == pg.K_t:
+                        self.update_time_rate()
+                    if event.key == pg.K_p:
+                        if self.time_rate_index!=0:
+                            self.time_rate_index=0
+                        else:
+                            self.time_rate_index = 1
+            elif event.type == pg.MOUSEBUTTONUP:
+                pos = pg.mouse.get_pos()
+                if self.console_area.collidepoint(pos[0],pos[1]):
+                    self.console_active=True
+                else:
+                    self.console_active=False
+
 
 
 # En cada tick se actualiza el sistema.
@@ -171,7 +212,7 @@ class Game(object):
             # mmmmm, doesn't look right
             self.dt = 1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
-            print(self.dt)
+            #print(self.dt)
             if self.time_rate_index!=0:
                 self.SS.update(self.dt)
             self.draw()
