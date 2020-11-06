@@ -9,7 +9,7 @@ import os.path
 import pygame
 import pygame.locals as pl
 
-pygame.font.init()
+#pygame.font.init()
 
 
 class TextInput:

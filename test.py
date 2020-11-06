@@ -35,16 +35,35 @@ def setup():
     T=Sun(name="Sol",mass=5.97e12, radius=10)
     T.pos=Pos(0,0)
     global sh
-    sh=Ship(T,"noster",10,Pos(200,200))
-    sh.velocity=Vector(Pos(10,0))
+    #sh=Ship(T,"noster",10,Pos(200,200))
+    #sh.velocity=Vector(Pos(10,0))
 
 
 def draw():
     Display.screen.fill((0, 0, 0))
     Display.draw_line_cartesian(Pos(0,area.top),Pos(0,area.bottom),area)
     Display.draw_line_cartesian(Pos(area.left,0),Pos(area.right,0),area)
+    # c=10
+    # r=10
+    # for f in pg.font.get_fonts():
+    #     try:
+    #         Display.font=pg.font.SysFont(f, 12)
+    #         Display.draw_text(f, Pos(c, r))
+    #         r+=15
+    #         if r>750:
+    #             if c==10:
+    #                 c=256
+    #             elif c==256:
+    #                 c=512
+    #             elif c==512:
+    #                 c=768
+    #             r=10
+    #     except:
+    #         pass
+    #pg.display.update()
+
     #Display.draw_circle_cartesian(T.pos, T.radius, area)
-    View.draw_ship(sh)
+    #View.draw_ship(sh)
 
 def update():
     global SIGNX
@@ -161,6 +180,7 @@ global SIGNY
 SIGNY=1
 X=0
 Display = Display(1024)
+
 View=View(Display,width=2048)
 run()
 print("weeey")

@@ -1,5 +1,6 @@
 import math
 from geometry import *
+from itertools import chain
 
 G = 6.674E-11  # m3•k-1•s-2.
 
@@ -13,6 +14,11 @@ class Body:
         self._pos = pos
         self.mass=mass
         self.time=0             # time after periapsis
+
+    def __iter__(self):
+        yield self
+        for v in chain(*map(iter, self.satellites)):
+          yield v
 
     @property
     def pos(self):
@@ -28,6 +34,20 @@ class Body:
     # returns the area of flatspace that the element is occupying
     def area(self):
         return None
+
+    # returns the object (itself or a satellite) identified by ident
+
+    def find(self,ident):
+        object=None
+        if ident.lower()==self.name.lower():
+            object=self
+        else:
+            for s in self.satellites:
+                object=s.find(ident)
+                if object:
+                    break
+        return object
+
 
     # gives the position of the body in the orbit and the time after periapisis (seconds)
     # at a given angle of the true anomaly
@@ -123,7 +143,7 @@ class Planet(Body):
     def __init__(self, primary=None, name="", mass=0, radius=0,peri=0,apo=0,incl=0,init_pos=0):
         Body.__init__(self,primary=primary,name=name,mass=mass)
         self.radius=radius
-        self.orbit=Orbit(primary.pos,peri,apo,incl)
+        self.orbit=Orbit(self.name,primary.pos,peri,apo,incl)
         self.T = 0  # Orbital period
         self.T = (2 * math.pi) * math.sqrt(self.orbit.a ** 3 / (G * self.primary.mass))
         (self.pos,self.time)=self.pos_at_angle(init_pos)
@@ -145,11 +165,12 @@ class Planet(Body):
 
 class Orbit():
     # focus1 is the position of focus1
-    def __init__(self, focus1=None, peri=0, apo=0, incl=0):
+    def __init__(self, name="",focus1=None, peri=0, apo=0, incl=0):
         if (peri > apo):
             (peri, apo) = (apo, peri)
 
 
+        self.name=name
         # Where should I put the incl attribute, in the orbit, or in the ellipse inside the orbit?
         self.peri = peri
         self.apo = apo
@@ -201,6 +222,7 @@ class SSystem:
         self.days=0
         self.ships=[]
 
+
     # updates delta milliseconds
     def update(self,delta):
         self.epoch+=delta
@@ -220,6 +242,17 @@ class SSystem:
             for s in self.ships:
                 s.update_pos(delta)
 
+    # todo find ships
+    def find(self,ident):
+        body=self.Sol.find(ident)
+        if not body:
+            l=[n.name for n in self.ships]
+            if ident in l:
+                i=l.index(ident)
+                body=self.ships[i]
+            else:
+                body=None
+        return body
 
 # A body that is not on rails
 class Ship:

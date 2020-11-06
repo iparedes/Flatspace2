@@ -1,10 +1,12 @@
 from geometry import *
+from display import *
 
 PATH_RESOLUTION=100
 EPSILON=10E-1 # small number used to avoid non existing values in the ellipse when calculating in the border of its area
 DEFAULT_PLANET_RADIUS=5 # radius to draw when the planet is too small to be seen
 DEFAULT_SUN_RADIUS=10 # radius to draw when the planet is too small to be seen
 DEFAULT_SHIP_SIZE=10
+LABEL_MARGIN=5
 
 # Defines an area in the flatspace with cartesian coordinates
 class View:
@@ -17,6 +19,8 @@ class View:
 
         self.display = display
         self.mperpixel = (self.area.width / self.display.WIDTH)
+
+        self.labels=True
 
     def set_center(self, pos):
         self.area.center = pos
@@ -95,6 +99,11 @@ class View:
         if radius==0:
             radius=DEFAULT_PLANET_RADIUS
         self.display.draw_circle(pos, radius)
+        if self.labels:
+            pos+=Pos(0,10)
+            self.display.draw_text(planet.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
+
+
 
     def draw_satellite(self,planet):
         pos=self.trans(planet.pos)
@@ -102,6 +111,10 @@ class View:
         if radius==0:
             radius=DEFAULT_PLANET_RADIUS
         self.display.draw_circle(pos, radius)
+        if self.labels:
+            pos+=Pos(0,10)
+            self.display.draw_text(planet.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
+
 
 
     def draw_sun(self,sun):
@@ -110,6 +123,10 @@ class View:
         if radius==0:
             radius=DEFAULT_SUN_RADIUS
         self.display.draw_circle(pos, radius,1)
+        if self.labels:
+            pos+=Pos(0,10)
+            self.display.draw_text(sun.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
+
 
     def draw_orbit(self,orbit):
         ellipse=orbit.ellipse
@@ -232,8 +249,15 @@ class View:
         paths = ellipse.paths(x1, x2, PATH_RESOLUTION)
         path = paths[0]
         path_conv = [self.trans(p) for p in path]
+        if self.labels:
+            pos=path_conv[int(len(path_conv)/2)]
+            self.display.draw_text(orbit.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
         self.display.draw_path(path_conv)
+
         path = paths[1]
         path_conv = [self.trans(p) for p in path]
+        if self.labels:
+            pos=path_conv[int(len(path_conv)/2)]
+            self.display.draw_text(orbit.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
         self.display.draw_path(path_conv)
 

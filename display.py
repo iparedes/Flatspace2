@@ -5,19 +5,24 @@ import math
 SCREEN_RATIO = 0.75  # 4:3
 
 WHITE = (200, 200, 200)
+LIGTH_GRAY = (128,128,128)
 GRAY = (50,50,50)
 LINE_WIDTH = 1
+
+ALIGN_LEFT=0
+ALIGN_CENTER=1
 
 
 class Display:
     def __init__(self, width):
         pg.init()
+        pg.font.init()
 
         self.WIDTH = width
         self.HEIGHT = int(width * SCREEN_RATIO)
         pg.display.set_caption("Test")
         self.screen = pg.display.set_mode((self.WIDTH, self.HEIGHT))
-
+        self.font= pg.font.SysFont('arial', 12)
         self.running = True
         # Holds surfaces that will be blitted
         # each element is a dictionary with keys 'surface' and 'pos'
@@ -38,6 +43,14 @@ class Display:
     def test_circle(self):
         # pg.draw.circle(self.main_surface,(255,0,0),(100,100),50)
         pg.draw.ellipse(self.screen, (0, 0, 255), pg.Rect(200, 200, 50, 100))
+
+    def draw_text(self,t,pos,color=WHITE,align=ALIGN_LEFT):
+        textsurface = self.font.render(t, False, color)
+        if align==ALIGN_CENTER:
+            r=textsurface.get_rect()
+            deltaP=Pos(-(r.width/2),0)
+            pos+=deltaP
+        self.screen.blit(textsurface, pos.coords())
 
     # Draws a point at Pos
     def draw_point(self, Pos):

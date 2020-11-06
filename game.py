@@ -3,6 +3,7 @@ from view import *
 from display import *
 from geometry import *
 from fspace import *
+from parser import *
 import pygame as pg
 import pygame_textinput
 
@@ -24,6 +25,7 @@ class Game(object):
         self.done = False
         self.SS=SSystem()
 
+
         self.max_apo=0
         self.max_peri=0 # watchout that max_peri is not the biggets periapsis, but the pri corresponding to max_apo
         self.load_data()
@@ -33,6 +35,13 @@ class Game(object):
         self.console=pygame_textinput.TextInput(initial_string="",font_size=14,text_color=(255,255,255))
         self.console_active=False
         self.console_area=pg.Rect(CONSOLE_MARGIN,self.Display.HEIGHT-self.console.font_size,self.Display.WIDTH-(CONSOLE_MARGIN*2),self.console.font_size)
+
+        self.parser=Parser()
+
+        #o=self.SS.find("bolo")
+        #for i in self.SS.Sol:
+        #    print(i.name)
+
         # sets the view with the sun in the center to accommodate to see complete the largest orbit
         # it is not totally correct as it assumes that the orbit is horizontal in the ref. coords
 
@@ -75,6 +84,24 @@ class Game(object):
         deltasecs=(milispertick/1000)*TIME_RATE[self.time_rate_index]
         #print("Delta per tick: "+str(deltasecs))
 
+    def exec(self,t):
+        instr=self.parser.parse_instr(t)
+        if instr:
+            cmd=instr.pop(0)
+            if cmd==MT:
+                ident=instr.pop(0)
+                obj=self.SS.find(ident)
+                if obj:
+                    pos=obj.pos
+                    self.View.set_center(pos)
+            elif cmd==LBL:
+                val=instr.pop(0)
+                if val==ON:
+                    self.View.labels=True
+                else:
+                    self.View.labels=False
+
+
     def load_data(self):
         file1 = open(DATA_FILE, 'r')
         Lines = file1.readlines()
@@ -84,7 +111,10 @@ class Game(object):
             if l[0] != '#':
                 l.rstrip()
                 items = l.split(',')
+                #removes spaces from names
+                items[1]=items[1].strip()
                 if items[0] == "Sun":
+                    self.SS.Sol.name=items[0]
                     self.SS.Sol.mass = float(items[1])
                     self.SS.Sol.radius = float(items[2])
                     self.SS.Sol.pos = Pos(0, 0)
@@ -132,22 +162,36 @@ class Game(object):
         self.Display.screen.blit(self.console.get_surface(), (self.console_area.left,self.console_area.top))
         # remove *************
         #self.Display.draw_line_cartesian(Pos(self.View.area.left, 0), Pos(self.View.area.right, 0), self.View.area)
-        if self.View.in_view(self.SS.Sol):
-            self.View.draw_sun(self.SS.Sol)
-        for p in self.SS.Sol.satellites:
-            if self.View.in_view(p):
-                self.View.draw_planet(p)
-            # draw orbit
-            if self.View.area.overlap(p.orbit.area):
-                self.View.draw_orbit(p.orbit)
-            for s in p.satellites:
-                if self.View.in_view(p):
-                    self.View.draw_satellite(s)
-                if self.View.area.overlap(s.orbit.area):
-                    self.View.draw_orbit(s.orbit)
+
+        bodies=iter(self.SS.Sol)
+        # the first element of the iterator is the Sun
+        body=next(bodies)
+        if self.View.in_view(body):
+            self.View.draw_sun(body)
+        for body in bodies:
+            if self.View.in_view(body):
+                self.View.draw_planet(body)
+            if self.View.area.overlap(body.orbit.area):
+                self.View.draw_orbit(body.orbit)
+
         for s in self.SS.ships:
             if self.View.in_view(s):
                 self.View.draw_ship(s)
+
+        # if self.View.in_view(self.SS.Sol):
+        #     self.View.draw_sun(self.SS.Sol)
+        # # this does not draw satellites if the planet is not in view
+        # for p in self.SS.Sol.satellites:
+        #     if self.View.in_view(p):
+        #         self.View.draw_planet(p)
+        #     # draw orbit
+        #     if self.View.area.overlap(p.orbit.area):
+        #         self.View.draw_orbit(p.orbit)
+        #     for s in p.satellites:
+        #         if self.View.in_view(p):
+        #             self.View.draw_satellite(s)
+        #         if self.View.area.overlap(s.orbit.area):
+        #             self.View.draw_orbit(s.orbit)
 
 
     # Handles events
@@ -168,6 +212,7 @@ class Game(object):
                         self.console.clear_text()
                         self.console.get_surface().fill((0,0,0))
                         print(t)
+                        self.exec(t)
                     #break
                 else:
                     if event.key == pg.K_LEFT:
