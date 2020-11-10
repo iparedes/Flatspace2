@@ -6,12 +6,16 @@ SCREEN_RATIO = 0.75  # 4:3
 
 WHITE = (200, 200, 200)
 LIGTH_GRAY = (128,128,128)
+CONSOLE_COLOR = (32,32,32,0)
 GRAY = (50,50,50)
 LINE_WIDTH = 1
 
 ALIGN_LEFT=0
 ALIGN_CENTER=1
 
+MARGIN=10
+
+TOPLEFT=0
 
 class Display:
     def __init__(self, width):
@@ -24,8 +28,9 @@ class Display:
         self.screen = pg.display.set_mode((self.WIDTH, self.HEIGHT))
         self.font= pg.font.SysFont('arial', 12)
         self.running = True
-        # Holds surfaces that will be blitted
-        # each element is a dictionary with keys 'surface' and 'pos'
+        self.info_box=[None]*4
+        self.info_coordsy=[None]*4
+        self.info_coordsy[0]=MARGIN
 
     # returns true if the coords x,y belong to the display
     def belongs(self,x,y):
@@ -109,9 +114,9 @@ class Display:
         self.draw_rectangle(new_r)
 
 
-    def draw_rectangle(self, topleft,width,height):
+    def draw_rectangle(self, topleft,width,height,color=WHITE):
         r=pg.Rect(topleft,(width,height))
-        pg.draw.rect(self.screen, WHITE, r, LINE_WIDTH)
+        pg.draw.rect(self.screen, color, r, LINE_WIDTH)
 
 
     def draw_ellipse_cartesian(self, ellipse, area):
@@ -200,6 +205,48 @@ class Display:
         p1 = pos + Pos(-2,0)
         p2 = pos + Pos(2, 0)
         pg.draw.line(self.screen, WHITE, p1.coords(), p2.coords(), LINE_WIDTH)
+
+
+    def draw_info(self,info,pos=0):
+        text=info()
+        t=text.split('\n')
+        width=0
+        height=0
+
+        if self.info_box[pos]==None:
+            return
+        if pos>=len(self.info_coordsy):
+            pos=0
+        if pos==0:
+            coords=[MARGIN,MARGIN]
+            topleft=(MARGIN,MARGIN) # This is used later to draw the background square
+        else:
+            y=self.info_coordsy[pos-1]+MARGIN
+            coords = [MARGIN,y]
+            topleft = (MARGIN,y)
+        if coords:
+            surfaces=[]
+            for l in t:
+                textsurface = self.font.render(l, False, WHITE)
+                r = textsurface.get_rect()
+                if r.width>width:
+                    width=r.width
+                height+=r.height
+                elem=(textsurface,tuple(coords))
+                surfaces.append(elem)
+                coords[1]+=r.height
+            r = pg.Rect(topleft, (width, height))
+            self.info_coordsy[pos]=r.bottom
+            pg.draw.rect(self.screen, CONSOLE_COLOR, r, 0)
+            for e in surfaces:
+                self.screen.blit(e[0], e[1])
+
+    def draw_info_boxes(self):
+        for i in range(0,len(self.info_box)):
+            if self.info_box[i]:
+                self.draw_info(self.info_box[i],i)
+
+
 
 
 

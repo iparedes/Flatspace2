@@ -11,6 +11,9 @@ import pygame.locals as pl
 
 #pygame.font.init()
 
+KEY_RETURN=1
+KEY_UP=2
+
 
 class TextInput:
     """
@@ -100,7 +103,7 @@ class TextInput:
                     )
 
                 elif event.key == pl.K_RETURN:
-                    return True
+                    return KEY_RETURN
 
                 elif event.key == pl.K_RIGHT:
                     # Add one to cursor_pos, but do not exceed len(input_string)
@@ -109,6 +112,9 @@ class TextInput:
                 elif event.key == pl.K_LEFT:
                     # Subtract one from cursor_pos, but do not go below zero:
                     self.cursor_position = max(self.cursor_position - 1, 0)
+
+                elif event.key == pl.K_UP:
+                    return KEY_UP
 
                 elif event.key == pl.K_END:
                     self.cursor_position = len(self.input_string)
@@ -169,6 +175,10 @@ class TextInput:
 
     def get_surface(self):
         return self.surface
+
+    def set_text(self,t):
+        self.input_string=t
+        self.surface = self.font_object.render(t, self.antialias, self.text_color)
 
     def get_text(self):
         return self.input_string

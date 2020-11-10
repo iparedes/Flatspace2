@@ -48,8 +48,7 @@ class View:
         self.mperpixel = self.area.width / self.display.WIDTH
         #print("Width: "+str(self.area.width)+", mpp: "+str(self.mperpixel))
 
-
-    def in_view(self, element):
+    def in_view(self, element=None):
         a=element.area
         if self.area.contains(a):
             return True
@@ -91,6 +90,8 @@ class View:
         #pos2=s.pos+Pos(x2,y2)
         #pos2=self.trans(pos2)
         self.display.draw_line(pos1,pos2)
+
+        self.display.draw_text(s.primary.name,bottomright)
 
 
     def draw_planet(self,planet):
@@ -144,19 +145,101 @@ class View:
         #print(nx,ny)
         x1=0
         x2=0
-        if nx==0:
-            if ny==0:
-                # ellipse totally contained
-                x1=ellipse_area.left+EPSILON
-                x2=ellipse_area.right-EPSILON
-            elif ny==1:
-                # dont know why we get here
-                print(ypoints[0])
-                pass
-            else:
-                x1 = ypoints[0].x
-                x2 = ypoints[1].x
-                l = [x1, x2]
+        try:
+            if nx==0:
+                if ny==0:
+                    # ellipse totally contained
+                    x1=ellipse_area.left+EPSILON
+                    x2=ellipse_area.right-EPSILON
+                elif ny==1:
+                    # dont know why we get here
+                    print(ypoints[0])
+                    pass
+                else:
+                    x1 = ypoints[0].x
+                    x2 = ypoints[1].x
+                    l = [x1, x2]
+                    if rect.left < ellipse_area.left < rect.right:
+                        l.append(ellipse.area.left + EPSILON)
+                    if rect.left < ellipse_area.right < rect.right:
+                        l.append(ellipse.area.right - EPSILON)
+                    l.sort()
+                    x1 = l[0]
+                    x2 = l[-1]
+            elif nx==1:
+                if ny==1:
+                    # corner cut
+                    x1=xpoints[0].x
+                    x2=ypoints[0].x
+                    l=[x1,x2]
+                    if rect.left < ellipse_area.left < rect.right:
+                        l.append(ellipse.area.left+EPSILON)
+                    if rect.left < ellipse_area.right < rect.right:
+                        l.append(ellipse.area.right-EPSILON)
+                    l.sort()
+                    x1=l[0]
+                    x2=l[-1]
+                else: #ny==3
+                    # corner cut + vertical bridge
+                    x1=xpoints[0].x
+                    x2=ypoints[0].x
+                    l=[x1,x2]
+                    if rect.left < ellipse_area.left < rect.right:
+                        l.append(ellipse.area.left+EPSILON)
+                    if rect.left < ellipse_area.right < rect.right:
+                        l.append(ellipse.area.right-EPSILON)
+                    l.sort()
+                    x1=l[0]
+                    x2=l[-1]
+            elif nx==2:
+                if ny==0: # crossing vertical edge
+                    if xpoints[0].x==xpoints[1].x:
+                        # lobe cutting one edge
+                        x1=xpoints[0].x
+                        if rect.left<ellipse_area.left<rect.right:
+                            x2 = ellipse_area.left+EPSILON
+                        else:
+                            x2 = ellipse_area.right-EPSILON
+                    else:
+                        # cutting both edges across
+                        x1=xpoints[0].x
+                        x2=xpoints[1].x
+                elif ny==2: # ny==2
+                    # Two corner cuts
+                    l=[p.x for p in xpoints+ypoints]
+                    if rect.left < ellipse_area.left < rect.right:
+                        l.append(ellipse.area.left+EPSILON)
+                    if rect.left < ellipse_area.right < rect.right:
+                        l.append(ellipse.area.right-EPSILON)
+                    l.sort()
+                    x1=l[0]
+                    x2=l[-1]
+                else: # ny==4
+                    l=[p.x for p in xpoints]
+                    if rect.left < ellipse_area.left < rect.right:
+                        l.append(ellipse.area.left+EPSILON)
+                    if rect.left < ellipse_area.right < rect.right:
+                        l.append(ellipse.area.right-EPSILON)
+                    l.sort()
+                    x1=l[0]
+                    x2=l[-1]
+            elif nx==3:
+                # corner cut + horizontal bridge
+                if ny==1:
+                    l=[p.x for p in xpoints+ypoints]
+                    if rect.left < ellipse_area.left < rect.right:
+                        l.append(ellipse.area.left+EPSILON)
+                    if rect.left < ellipse_area.right < rect.right:
+                        l.append(ellipse.area.right-EPSILON)
+                    l.sort()
+                    x1=l[0]
+                    x2=l[-1]
+                else: # ny==3
+                    x1=rect.left
+                    x2=rect.right
+
+            else: # nx==4
+                l = [rect.left,rect.right]
                 if rect.left < ellipse_area.left < rect.right:
                     l.append(ellipse.area.left + EPSILON)
                 if rect.left < ellipse_area.right < rect.right:
@@ -164,99 +247,30 @@ class View:
                 l.sort()
                 x1 = l[0]
                 x2 = l[-1]
-        elif nx==1:
-            if ny==1:
-                # corner cut
-                x1=xpoints[0].x
-                x2=ypoints[0].x
-                l=[x1,x2]
-                if rect.left < ellipse_area.left < rect.right:
-                    l.append(ellipse.area.left+EPSILON)
-                if rect.left < ellipse_area.right < rect.right:
-                    l.append(ellipse.area.right-EPSILON)
-                l.sort()
-                x1=l[0]
-                x2=l[-1]
-            else: #ny==3
-                # corner cut + vertical bridge
-                x1=xpoints[0].x
-                x2=ypoints[0].x
-                l=[x1,x2]
-                if rect.left < ellipse_area.left < rect.right:
-                    l.append(ellipse.area.left+EPSILON)
-                if rect.left < ellipse_area.right < rect.right:
-                    l.append(ellipse.area.right-EPSILON)
-                l.sort()
-                x1=l[0]
-                x2=l[-1]
-        elif nx==2:
-            if ny==0: # crossing vertical edge
-                if xpoints[0].x==xpoints[1].x:
-                    # lobe cutting one edge
-                    x1=xpoints[0].x
-                    if rect.left<ellipse_area.left<rect.right:
-                        x2 = ellipse_area.left+EPSILON
-                    else:
-                        x2 = ellipse_area.right-EPSILON
-                else:
-                    # cutting both edges across
-                    x1=xpoints[0].x
-                    x2=xpoints[1].x
-            elif ny==2: # ny==2
-                # Two corner cuts
-                l=[p.x for p in xpoints+ypoints]
-                if rect.left < ellipse_area.left < rect.right:
-                    l.append(ellipse.area.left+EPSILON)
-                if rect.left < ellipse_area.right < rect.right:
-                    l.append(ellipse.area.right-EPSILON)
-                l.sort()
-                x1=l[0]
-                x2=l[-1]
-            else: # ny==4
-                l=[p.x for p in xpoints]
-                if rect.left < ellipse_area.left < rect.right:
-                    l.append(ellipse.area.left+EPSILON)
-                if rect.left < ellipse_area.right < rect.right:
-                    l.append(ellipse.area.right-EPSILON)
-                l.sort()
-                x1=l[0]
-                x2=l[-1]
-        elif nx==3:
-            # corner cut + horizontal bridge
-            if ny==1:
-                l=[p.x for p in xpoints+ypoints]
-                if rect.left < ellipse_area.left < rect.right:
-                    l.append(ellipse.area.left+EPSILON)
-                if rect.left < ellipse_area.right < rect.right:
-                    l.append(ellipse.area.right-EPSILON)
-                l.sort()
-                x1=l[0]
-                x2=l[-1]
-            else: # ny==3
-                x1=rect.left
-                x2=rect.right
-
-        else: # nx==4
-            l = [rect.left,rect.right]
-            if rect.left < ellipse_area.left < rect.right:
-                l.append(ellipse.area.left + EPSILON)
-            if rect.left < ellipse_area.right < rect.right:
-                l.append(ellipse.area.right - EPSILON)
-            l.sort()
-            x1 = l[0]
-            x2 = l[-1]
+        except:
+            print("xpoints: ",end='')
+            for p in xpoints:
+                print(p,end=',')
+            print("ypoints: ",end='')
+            for p in ypoints:
+                print(p,end=',')
+            exit(-1)
 
         paths = ellipse.paths(x1, x2, PATH_RESOLUTION)
         path = paths[0]
         path_conv = [self.trans(p) for p in path]
+
+        label_done=False
         if self.labels:
             pos=path_conv[int(len(path_conv)/2)]
-            self.display.draw_text(orbit.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
+            if self.display.belongs(pos.x,pos.y):
+                self.display.draw_text(orbit.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
+                label_done=True
         self.display.draw_path(path_conv)
 
         path = paths[1]
         path_conv = [self.trans(p) for p in path]
-        if self.labels:
+        if self.labels and not label_done:
             pos=path_conv[int(len(path_conv)/2)]
             self.display.draw_text(orbit.name,pos,color=LIGTH_GRAY,align=ALIGN_CENTER)
         self.display.draw_path(path_conv)

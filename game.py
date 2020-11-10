@@ -4,10 +4,11 @@ from display import *
 from geometry import *
 from fspace import *
 from parser import *
+from console import *
 import pygame as pg
-import pygame_textinput
 
-DATA_FILE='data'
+
+DATA_FILE='data3'
 
 ZOOM_FACTOR = 25
 MOVE_FACTOR = 10
@@ -18,7 +19,7 @@ MOVE_FACTOR = 10
 TIME_RATE=[0,1,10,100,1000,10000,1e5,1e6]
 FPS = 10
 
-CONSOLE_MARGIN=10
+
 
 class Game(object):
     def __init__(self):
@@ -32,11 +33,9 @@ class Game(object):
         self.clock = pg.time.Clock()
         self.Display = Display(1024)
 
-        self.console=pygame_textinput.TextInput(initial_string="",font_size=14,text_color=(255,255,255))
-        self.console_active=False
-        self.console_area=pg.Rect(CONSOLE_MARGIN,self.Display.HEIGHT-self.console.font_size,self.Display.WIDTH-(CONSOLE_MARGIN*2),self.console.font_size)
-
         self.parser=Parser()
+        self.console=Console(self.Display.WIDTH,self.Display.HEIGHT)
+
 
         #o=self.SS.find("bolo")
         #for i in self.SS.Sol:
@@ -50,7 +49,8 @@ class Game(object):
         #####################################
 
         self.View=View(self.Display,width=(self.max_apo*2.05))
-        #self.View = View(self.Display, width=800)
+        #remove **********************************
+        self.View = View(self.Display, width=1e12)
         center=Pos(0,0)
         pos_display=self.View.trans(center)
         self.Display.draw_point(pos_display)
@@ -88,18 +88,46 @@ class Game(object):
         instr=self.parser.parse_instr(t)
         if instr:
             cmd=instr.pop(0)
+            # MOVE TO
             if cmd==MT:
                 ident=instr.pop(0)
                 obj=self.SS.find(ident)
                 if obj:
                     pos=obj.pos
                     self.View.set_center(pos)
+            # LABEL
             elif cmd==LBL:
                 val=instr.pop(0)
                 if val==ON:
                     self.View.labels=True
                 else:
                     self.View.labels=False
+            # INFO
+            elif cmd==INFO:
+                ident=instr.pop(0)
+                obj=self.SS.find(ident)
+                if obj:
+                    print(str(obj))
+            # DISTANCE
+            elif cmd==DIST:
+                id1=instr.pop(0)
+                id2 = instr.pop(0)
+                obj1=self.SS.find(id1)
+                obj2 = self.SS.find(id2)
+                if obj1 and obj2:
+                    p1=obj1.pos
+                    p2=obj2.pos
+                    d=p1.distance(p2)
+                    print("{:.2E}".format(d))
+            elif cmd==DISPLAY:
+                dispnum=instr.pop(0)
+                id=instr.pop(0)
+                obj=self.SS.find(id)
+                if obj:
+                    info=obj.__str__
+                    self.Display.info_box[dispnum]=info
+
+
 
 
     def load_data(self):
@@ -158,8 +186,10 @@ class Game(object):
 
     def draw(self):
         self.Display.screen.fill((0, 0, 0))
-        pg.draw.rect(self.Display.screen,(16,16,16),self.console_area)
-        self.Display.screen.blit(self.console.get_surface(), (self.console_area.left,self.console_area.top))
+        self.console.draw(self.Display.screen)
+        self.Display.draw_info_boxes()
+        #pg.draw.rect(self.Display.screen,(16,16,16),self.console_area)
+        #self.Display.screen.blit(self.console.get_surface(), (self.console_area.left,self.console_area.top))
         # remove *************
         #self.Display.draw_line_cartesian(Pos(self.View.area.left, 0), Pos(self.View.area.right, 0), self.View.area)
 
@@ -203,15 +233,12 @@ class Game(object):
             if event.type == pg.QUIT:
                 self.done = True
             if event.type == pg.KEYDOWN:
-                print(events)
-                if self.console_active:
+                if self.console.active:
                     events.insert(0,event)
-                    if self.console.update(events):
+                    ret=self.console.update(events)
+                    if ret:
                         # pressed enter
                         t=self.console.get_text()
-                        self.console.clear_text()
-                        self.console.get_surface().fill((0,0,0))
-                        print(t)
                         self.exec(t)
                     #break
                 else:
@@ -236,10 +263,10 @@ class Game(object):
                             self.time_rate_index = 1
             elif event.type == pg.MOUSEBUTTONUP:
                 pos = pg.mouse.get_pos()
-                if self.console_area.collidepoint(pos[0],pos[1]):
-                    self.console_active=True
+                if self.console.area.collidepoint(pos[0],pos[1]):
+                    self.console.active=True
                 else:
-                    self.console_active=False
+                    self.console.active=False
 
 
 

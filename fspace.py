@@ -147,9 +147,11 @@ class Planet(Body):
         self.T = 0  # Orbital period
         self.T = (2 * math.pi) * math.sqrt(self.orbit.a ** 3 / (G * self.primary.mass))
         (self.pos,self.time)=self.pos_at_angle(init_pos)
+        self.SOI=self.orbit.a*((self.mass/primary.mass)**(2/5))
 
     def __str__(self):
-        t=self.name+" mass:"+"{:.2e}".format(self.mass)+" radius: "+"{:.2e}".format(self.radius)+"\nOrbit: "+str(self.orbit)
+        t=self.name+" mass:"+"{:.2e}".format(self.mass)+" radius: "+"{:.2e}".format(self.radius)+"\n"
+        t+="SOI: "+"{:.2E}".format(self.SOI)+" Orbit: "+str(self.orbit)
         return t
 
     @property
@@ -232,6 +234,13 @@ class SSystem:
             #print(str(self.days)+" days")
         for p in self.Sol.satellites:
             p.update_pos(delta)
+
+        for s in self.ships:
+            p=s.pos
+            prim = self.soi_body(p)
+            if prim != s.primary:
+                s.primary = prim
+
         if delta>=1000:
             cont=0
             while cont<=delta:
@@ -242,7 +251,25 @@ class SSystem:
             for s in self.ships:
                 s.update_pos(delta)
 
-    # todo find ships
+    def soi_body(self,pos):
+        body=None
+        # finds if pos is under the SOI of a planet
+        for b in self.Sol.satellites:
+            d=pos.distance(b.pos)
+            if d<b.SOI:
+                body=b
+                break
+        if body:
+            # if found a planet, finds if pos is under the SOI of a satellite of the planet
+            for b in body.satellites:
+                d=pos.distance(b.pos)
+                if d<b.SOI:
+                    body=b
+                    break
+        else:
+            body=self.Sol
+        return body
+
     def find(self,ident):
         body=self.Sol.find(ident)
         if not body:
@@ -262,9 +289,16 @@ class Ship:
         self.mass=mass
         self.pos=pos
         if vel==None:
-            self.velocity=Vector(Pos(0,0))
+            self.velocity=Vector(pos=Pos(0,0))
         else:
             self.velocity=vel
+
+    def __str__(self):
+        t=self.name+" ("+str(self.mass)+"Kg)\n"
+        t+="Primary: "+self.primary.name+"\n"
+        t+="Pos: "+str(self.pos)+"\n"
+        t+="Vel: "+str(self.velocity)
+        return t
 
     def update_pos(self,delta):
         # Calculates the magnitud of the gravitational force

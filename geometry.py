@@ -7,7 +7,7 @@ class Pos:
         self.y=y
 
     def __str__(self):
-        t="("+str(self.x)+","+str(self.y)+")"
+        t="("+"{:.2E}".format(self.x)+","+"{:.2E}".format(self.y)+")"
         return t
 
     def __add__(self, other):
@@ -74,8 +74,8 @@ class Vector(Pos):
 
 
     def __str__(self):
-        t="->"+Pos.__str__(self)
-        t+="Mag: "+str(self.magnitude)+" Dir: "+str(self.direction)+"\n"
+        t=Pos.__str__(self)
+        t+="\nMag: "+"{:.2f}".format(self.magnitude)+" Dir: "+"{:.2f}".format(self.direction)
         return t
 
     def __add__(self, other):
