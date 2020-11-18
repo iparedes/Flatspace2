@@ -127,9 +127,6 @@ class Game(object):
                     info=obj.__str__
                     self.Display.info_box[dispnum]=info
 
-
-
-
     def load_data(self):
         file1 = open(DATA_FILE, 'r')
         Lines = file1.readlines()

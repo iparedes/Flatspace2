@@ -91,6 +91,9 @@ class View:
         #pos2=self.trans(pos2)
         self.display.draw_line(pos1,pos2)
 
+        # Projection
+        self.display.draw_path(s.path)
+
         self.display.draw_text(s.primary.name,bottomright)
 
 

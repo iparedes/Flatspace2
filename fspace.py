@@ -1,6 +1,7 @@
 import math
 from geometry import *
 from itertools import chain
+from copy import copy, deepcopy
 
 G = 6.674E-11  # m3•k-1•s-2.
 
@@ -19,6 +20,20 @@ class Body:
         yield self
         for v in chain(*map(iter, self.satellites)):
           yield v
+
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo={}):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
     @property
     def pos(self):
@@ -171,7 +186,6 @@ class Orbit():
         if (peri > apo):
             (peri, apo) = (apo, peri)
 
-
         self.name=name
         # Where should I put the incl attribute, in the orbit, or in the ellipse inside the orbit?
         self.peri = peri
@@ -188,6 +202,20 @@ class Orbit():
         # to accelerate calculations
         self._costheta = math.cos(math.radians(incl))
         self._sintheta = math.sin(math.radians(incl))
+
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo={}):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
     def __str__(self):
         t="a:"+"{:.2e}".format(self.a)+", "+"b:"+"{:.2e}".format(self.b)+"\n"
@@ -224,6 +252,19 @@ class SSystem:
         self.days=0
         self.ships=[]
 
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo={}):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
     # updates delta milliseconds
     def update(self,delta):
@@ -292,6 +333,9 @@ class Ship:
             self.velocity=Vector(pos=Pos(0,0))
         else:
             self.velocity=vel
+
+        # Projection
+        self.path=None
 
     def __str__(self):
         t=self.name+" ("+str(self.mass)+"Kg)\n"
