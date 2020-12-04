@@ -5,6 +5,7 @@ import math
 SCREEN_RATIO = 0.75  # 4:3
 
 WHITE = (200, 200, 200)
+BLUE = (50,50,200)
 LIGTH_GRAY = (128,128,128)
 CONSOLE_COLOR = (32,32,32,0)
 GRAY = (50,50,50)
@@ -31,6 +32,7 @@ class Display:
         self.info_box=[None]*4
         self.info_coordsy=[None]*4
         self.info_coordsy[0]=MARGIN
+        self.time=None
 
     # returns true if the coords x,y belong to the display
     def belongs(self,x,y):
@@ -72,8 +74,8 @@ class Display:
         self.draw_circle(p,rad)
 
 
-    def draw_circle(self, pos, radius, linewidth=0):
-        pg.draw.circle(self.screen, WHITE, pos.coords(), radius, linewidth)
+    def draw_circle(self, pos, radius, linewidth=0,color=WHITE):
+        pg.draw.circle(self.screen, color, pos.coords(), radius, linewidth)
 
     def draw_Xmarks_cartesian(self,k,area):
         step=self.WIDTH/area.width
@@ -245,6 +247,23 @@ class Display:
         for i in range(0,len(self.info_box)):
             if self.info_box[i]:
                 self.draw_info(self.info_box[i],i)
+
+    # draws the clock
+    # If an epoch is passed, calculates the days, hours, minutes and seconds
+    # otherwise just prints the last time (this is used to avoid calculations in each frame,
+    # as a new epoch is only passed once per second from the draw loop
+    def draw_clock(self,epoch=None):
+        if epoch:
+            days,secs=divmod(epoch,86400)
+            hours,secs=divmod(secs,3600)
+            minutes,secs=divmod(secs,60)
+            t=str(int(days))+"d "+str(int(hours))+":"+str(int(minutes))+":"+str(int(secs))
+            self.time=t
+        else:
+            t=self.time
+        pos=Pos(self.WIDTH-100,MARGIN)
+        self.draw_text(t,pos)
+
 
 
 

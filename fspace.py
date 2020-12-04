@@ -9,7 +9,7 @@ G = 6.674E-11  # m3•k-1•s-2.
 class Body:
     def __init__(self,primary=None,name="",mass=0,pos=None):
         self.name=name
-        self.primary=primary    # body that is in the center of the orbit
+        self.primary=primary    # The body generating the applicable sphere of influence
         self.orbit=None         # orbit around the primary body
         self.satellites=[]      # orbiting bodies
         self._pos = pos
@@ -127,6 +127,7 @@ class Body:
         return math.radians(nu)
 
     # updates the pos of the body in the orbit according to a delta in seconds
+    # it only accounts for one level of satellites. Probably should use the iterator here
     def update_pos(self,delta):
         self.set_pos_time(self.time+delta)
         for s in self.satellites:
@@ -251,6 +252,7 @@ class SSystem:
         self.epoch=0
         self.days=0
         self.ships=[]
+        self.projecting=False
 
     def __copy__(self):
         cls = self.__class__
@@ -266,31 +268,39 @@ class SSystem:
             setattr(result, k, deepcopy(v, memo))
         return result
 
-    # updates delta milliseconds
-    def update(self,delta):
+    # updates delta seconds
+    def update(self,delta,projection=False):
         self.epoch+=delta
-        #print("delta: "+str(delta))
         if(self.epoch/86400>self.days):
             self.days+=1
-            #print(str(self.days)+" days")
+
+        # Planets and satellites go on rails, we can forecast
         for p in self.Sol.satellites:
             p.update_pos(delta)
 
+        # todo this is wrong. Should be done as part of the ship update
+        # updates the SOI of ships
         for s in self.ships:
             p=s.pos
             prim = self.soi_body(p)
             if prim != s.primary:
                 s.primary = prim
 
-        if delta>=1000:
+        # if the delta is to big, we are more granular on the ship updates
+        # parameters here are:
+        #   threshold for the ship calculation
+        #   delta for the ship updates
+        if delta>=600 and not projection:
             cont=0
             while cont<=delta:
                 for s in self.ships:
-                    s.update_pos(100)
-                cont+=100
+                    s.update_pos(10)
+                cont+=10
         else:
             for s in self.ships:
+                print("Updating ship"+s.name)
                 s.update_pos(delta)
+                print(s.pos)
 
     def soi_body(self,pos):
         body=None
@@ -311,6 +321,7 @@ class SSystem:
             body=self.Sol
         return body
 
+    # returns the body identified by ident
     def find(self,ident):
         body=self.Sol.find(ident)
         if not body:
@@ -321,6 +332,25 @@ class SSystem:
             else:
                 body=None
         return body
+
+    # Makes a simulation of the system days ahead of its current time
+    def project(self,days):
+        self.projecting = True
+        step=10800
+        cont=step
+        max=days*86400
+        while cont<=max:
+            self.update(step,True)
+            cont+=step
+            print("project "+str(cont))
+        self.projecting = False
+
+    def project_ships(self):
+        for s in self.ships:
+            (e, peri, apo, incl) = s.orbital_params()
+            if e<1:
+                o=Orbit(focus1=s.primary.pos,peri=peri,apo=apo,incl=incl)
+                s.orbit=o
 
 # A body that is not on rails
 class Ship:
@@ -335,7 +365,8 @@ class Ship:
             self.velocity=vel
 
         # Projection
-        self.path=None
+        self.path=[]
+        self.orbit=None
 
     def __str__(self):
         t=self.name+" ("+str(self.mass)+"Kg)\n"
@@ -343,6 +374,20 @@ class Ship:
         t+="Pos: "+str(self.pos)+"\n"
         t+="Vel: "+str(self.velocity)
         return t
+
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo={}):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
 
     def update_pos(self,delta):
         # Calculates the magnitud of the gravitational force
@@ -356,6 +401,8 @@ class Ship:
         self.velocity+=vector
         shift=Pos(self.velocity.x*delta,self.velocity.y*delta)
         self.pos+=shift
+        newpos=deepcopy(self.pos)
+        self.path.append(newpos)
         #print(self.velocity)
 
     def Fg(self):
@@ -373,4 +420,56 @@ class Ship:
         height = width
         R = Rectangle(left, top, width, height)
         return R
+
+    # From: https://github.com/cmaureir/python-kepler/blob/master/KeplerianOrbit.py
+    def orbital_params(self):
+        mu=self.primary.mass*G
+
+        # angular momentum
+        # j = r x v
+        posVector=Vector(pos=self.pos)
+        jv=posVector.cross_product(self.velocity)
+        # Rung-Lez vector
+        # e = { (v x j) / (G * m) }  - { r / |r| }
+        tv=self.velocity.cross_product(jv)
+        tv=tv/mu
+        rv=Vector(pos=self.pos)
+        rmag=rv.magnitude
+        vv=rv/rmag
+        ev=tv-vv
+
+        # ev points (I believe) in the direction of the simmetry axis of the ellipse
+        horizontal=Vector(pos=Pos(1,0))
+        incl=ev.angle(horizontal)
+        print("incl:",incl)
+
+        # Eccentricity
+        ecc=ev.magnitude
+        print("ecc: "+str(ecc))
+        # semi-major axis
+        # a = ( j * j ) / (G * m * | 1 - ecc^2 | )
+        k=jv.dot_product(jv)
+        factor=abs(1-(ecc**2))
+        a=k/(mu*factor)
+        print("a: "+str(a))
+
+        # semi-minor axis
+        b=a*math.sqrt(factor)
+        print("b: "+str(b))
+
+        # c: distance from center to focus
+        c=a*ecc
+        peri=a-c
+        apo=a+c
+
+        return(ecc,peri,apo,incl)
+
+
+
+
+
+
+
+
+
 

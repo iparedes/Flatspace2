@@ -1,4 +1,5 @@
 import sys
+import logging
 from view import *
 from display import *
 from geometry import *
@@ -6,6 +7,11 @@ from fspace import *
 from parser import *
 from console import *
 import pygame as pg
+
+#todo WHY IS NOT DRAWING THE PATH WHEN PROJECTING?
+#todo draw projections in a different color
+#todo draw path travelled by ships
+#todo needs logging badly
 
 
 DATA_FILE='data3'
@@ -15,16 +21,16 @@ MOVE_FACTOR = 10
 
 # The time rate is multiplied by the dt
 # the dt are milliseconds calculated dividing one second between the FPS
-# the default time rate (1) are 100ms per update
-TIME_RATE=[0,1,10,100,1000,10000,1e5,1e6]
+TIME_RATE=[0,100,1000,10000,1e5,1e6,1e7,1e8]
 FPS = 10
 
-
+logging.basicConfig(filename='fspace.log', level=logging.INFO)
 
 class Game(object):
     def __init__(self):
         self.done = False
         self.SS=SSystem()
+        self.SSProjection=None
 
 
         self.max_apo=0
@@ -56,7 +62,7 @@ class Game(object):
         self.Display.draw_point(pos_display)
 
         self.time_rate_index=0
-
+        self.projection=False
         # This is only for testing purposes. The parent of the orbit should be the Sun, not the planet
         # P=Planet("test",1e9,6e6,Pos(5e6,5e6))
         # O=Orbit(0.47E+11, 9.52E+11,30)
@@ -181,16 +187,12 @@ class Game(object):
                     self.SS.Sol.add_planet(P)
 
 
-    def draw(self):
-        self.Display.screen.fill((0, 0, 0))
+    def draw(self, system):
+        #self.Display.screen.fill((0, 0, 0))
         self.console.draw(self.Display.screen)
         self.Display.draw_info_boxes()
-        #pg.draw.rect(self.Display.screen,(16,16,16),self.console_area)
-        #self.Display.screen.blit(self.console.get_surface(), (self.console_area.left,self.console_area.top))
-        # remove *************
-        #self.Display.draw_line_cartesian(Pos(self.View.area.left, 0), Pos(self.View.area.right, 0), self.View.area)
 
-        bodies=iter(self.SS.Sol)
+        bodies=iter(system.Sol)
         # the first element of the iterator is the Sun
         body=next(bodies)
         if self.View.in_view(body):
@@ -201,7 +203,7 @@ class Game(object):
             if self.View.area.overlap(body.orbit.area):
                 self.View.draw_orbit(body.orbit)
 
-        for s in self.SS.ships:
+        for s in system.ships:
             if self.View.in_view(s):
                 self.View.draw_ship(s)
 
@@ -251,13 +253,19 @@ class Game(object):
                         self.View.zoom(ZOOM_FACTOR)
                     if event.key == pg.K_x:
                         self.View.zoom(-ZOOM_FACTOR)
+                    # t: move to next time rate
                     if event.key == pg.K_t:
                         self.update_time_rate()
+                    # f: Projection
+                    if event.key == pg.K_f:
+                        self.projection=not self.projection
                     if event.key == pg.K_p:
                         if self.time_rate_index!=0:
                             self.time_rate_index=0
+                            logging.info('Pausing')
                         else:
                             self.time_rate_index = 1
+                            logging.info('Set time rate '+str(TIME_RATE[self.time_rate_index]))
             elif event.type == pg.MOUSEBUTTONUP:
                 pos = pg.mouse.get_pos()
                 if self.console.area.collidepoint(pos[0],pos[1]):
@@ -274,17 +282,40 @@ class Game(object):
 # en general el valor para el update es (delta/1000)*Time_rate
 
     def run(self):
+        tix=0
         while not self.done:
+            # we do this here instead inside draw to not overwrite the projections
+            self.Display.screen.fill((0, 0, 0))
             self.event_loop()
-            self.clock.tick(FPS)
+
+            # updates the clock once per second, regardless the speed
+            tix+=self.clock.tick(FPS)
+            if tix>=1000:
+                tix=0
+                self.Display.draw_clock(self.SS.epoch)
+            else:
+                self.Display.draw_clock()
             # instead of getting the ticks from clock.tick. I assume it works fine and calculate directly
             # mmmmm, doesn't look right
             self.dt = 1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
-            #print(self.dt)
+            self.dt /=1000 # convert to seconds
+            print(self.dt)
+
             if self.time_rate_index!=0:
                 self.SS.update(self.dt)
-            self.draw()
+            # only projects during pause after pressing the 'f' key
+            elif self.projection:
+                #self.SSProjection=deepcopy(self.SS)
+                #self.SSProjection.project(3000)
+                # Have to draw the projection (in a different color???)
+                #self.draw(self.SSProjection)
+                self.SS.project_ships()
+                self.projection=False
+
+            if self.SSProjection:
+                self.draw(self.SSProjection)
+            self.draw(self.SS)
             pg.display.update()
         pg.quit()
         sys.exit()

@@ -1,3 +1,4 @@
+import sys
 from geometry import *
 from display import *
 from view import *
@@ -5,9 +6,12 @@ import pygame as pg
 from fspace import *
 from geometry import *
 
+global O
+
 done=False
 
 def event_loop():
+    global done
     for event in pg.event.get():
         if event.type == pg.QUIT:
             done = True
@@ -16,7 +20,7 @@ def run():
     setup()
     while not done:
         event_loop()
-        #update()
+        update()
         draw()
         pg.display.update()
     pg.quit()
@@ -24,25 +28,41 @@ def run():
 
 def setup():
     global area
-    area=Rectangle(-500,750/2,1000,1000*0.75)
+    #area=Rectangle(-500,750/2,1000,1000*0.75)
+    area=Rectangle(-0.5e12,3e11,1e12,0.75*1e12)
 
-    Display.draw_line_cartesian(Pos(0,area.top),Pos(0,area.bottom),area)
-    Display.draw_line_cartesian(Pos(area.left,0),Pos(area.right,0),area)
+    #Display.draw_line_cartesian(Pos(0,area.top),Pos(0,area.bottom),area)
+    #Display.draw_line_cartesian(Pos(area.left,0),Pos(area.right,0),area)
     #Display.draw_Xmarks_cartesian(0,area)
     #Display.draw_Ymarks_cartesian(0,area)
 
     global T
-    T=Sun(name="Sol",mass=5.97e12, radius=10)
+    T=Sun(name="Sol",mass=5.97e24, radius=10)
     T.pos=Pos(0,0)
     global sh
-    #sh=Ship(T,"noster",10,Pos(200,200))
-    #sh.velocity=Vector(Pos(10,0))
+    sh=Ship(T,"noster",10,Pos(1e6,0))
+    sh.velocity=Vector(pos=Pos(0,5))
+    sh.update_pos(10e-4)
+
+    # Nice elliptical orbit
+    #sh=Ship(T,"noster",10,Pos(200,0))
+    #sh.velocity=Vector(pos=Pos(0,10))
+    #sh.update_pos(10e-4)
+
+
+    (e,peri, apo, incl) = sh.orbital_params()
+    global O
+    if e<1:
+        O=Orbit(focus1=sh.primary.pos,peri=peri,apo=apo,incl=incl)
+    else:
+        O=None
+
 
 
 def draw():
     Display.screen.fill((0, 0, 0))
-    Display.draw_line_cartesian(Pos(0,area.top),Pos(0,area.bottom),area)
-    Display.draw_line_cartesian(Pos(area.left,0),Pos(area.right,0),area)
+    #Display.draw_line_cartesian(Pos(0,area.top),Pos(0,area.bottom),area)
+    #Display.draw_line_cartesian(Pos(area.left,0),Pos(area.right,0),area)
     # c=10
     # r=10
     # for f in pg.font.get_fonts():
@@ -62,19 +82,24 @@ def draw():
     #         pass
     #pg.display.update()
 
-    #Display.draw_circle_cartesian(T.pos, T.radius, area)
-    #View.draw_ship(sh)
+    global sh
+    global T
+    #Display.draw_circle_cartesian(T.pos, 1000, area)
+    View.draw_planet(T)
+    View.draw_ship(sh)
+    #if O:
+     #   View.draw_orbit(O)
 
 def update():
     global SIGNX
     global SIGNY
-    sh.velocity+=Pos(SIGNX,SIGNY)
-    if sh.velocity.x==-10:
-        SIGNX=1
-    if sh.velocity.y==10:
-        SIGNY=-1
-    elif sh.velocity.y==-10:
-        SIGNY=1
+    # sh.velocity+=Pos(SIGNX,SIGNY)
+    # if sh.velocity.x==-10:
+    #     SIGNX=1
+    # if sh.velocity.y==10:
+    #     SIGNY=-1
+    # elif sh.velocity.y==-10:
+    #     SIGNY=1
     sh.update_pos(10e-3)
     pass
 

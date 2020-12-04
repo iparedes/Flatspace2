@@ -2,44 +2,69 @@ import math
 
 class Pos:
 
-    def __init__(self,x,y):
+    # Our space is flat, so we will only use x and y coords
+    # we keep z as Pos is also used to define a vector and the cross product of vectors
+    # results in a vector perpendicular to the plane x,y
+    def __init__(self,x,y,z=0):
         self.x=x
         self.y=y
+        self.z=z
 
     def __str__(self):
-        t="("+"{:.2E}".format(self.x)+","+"{:.2E}".format(self.y)+")"
+        #t="("+"{:.2E}".format(self.x)+","+"{:.2E}".format(self.y)+")"
+        #t = "(" + str(self.x) + "," + str(self.y) + ")"
+        #t = "(" + str(self.x) + "," + str(self.y) + "," +str(self.z)+")"
+        t = "(" + f'{self.x:,}' + "," + f'{self.y:,}' + "," + f'{self.z:,}' + ")"
         return t
 
     def __add__(self, other):
-        return Pos(self.x+other.x,self.y+other.y)
+        return Pos(self.x+other.x,self.y+other.y,self.z+other.z)
 
     def __iadd__(self, other):
         self.x += other.x
         self.y += other.y
+        self.z += other.z
         return self
 
     def __sub__(self, other):
-        return Pos(self.x-other.x,self.y-other.y)
+        return Pos(self.x-other.x,self.y-other.y,self.z-other.z)
 
     def __isub__(self, other):
         self.x -= other.x
         self.y -= other.y
+        self.z -= other.z
         return self
 
     # Multiply both coordinates by a value
-    def __rmul__(self, other):
-        return Pos(self.x * other,self.y * other)
+    def __rmul__(self, value):
+        return Pos(self.x * value,self.y * value,self.z*value)
 
     # Multiply both coordinates by a value
-    def __mul__(self, other):
-        return Pos(self.x * other,self.y * other)
+    def __mul__(self, value):
+        return Pos(self.x * value,self.y * value,self.z*value)
 
+    def __truediv__(self,value):
+        p=Pos(self.x / value, self.y / value, self.z / value)
+        return p
+
+    def rotate_rads(self,rads):
+        x=(self.x*math.cos(rads))-(self.y*math.sin(rads))
+        y=(self.y*math.cos(rads))+(self.x*math.sin(rads))
+        pos=Pos(x,y)
+        return pos
+
+    def rotate(self,degrees):
+        p=rotate_rads(math.radians(degrees))
+        return p
 
     def coords(self):
         return (self.x,self.y)
 
+    def coordZ(self):
+        return self.z
+
     def distance(self,other):
-        return math.sqrt(((self.x-other.x)**2)+((self.y-other.y)**2))
+        return math.sqrt(((self.x-other.x)**2)+((self.y-other.y)**2)+((self.z-other.z)**2))
 
 class Vector(Pos):
 
@@ -50,11 +75,15 @@ class Vector(Pos):
     def __init__(self,**kwargs):
         if 'pos' in kwargs:
             pos=kwargs['pos']
-            Pos.__init__(self, pos.x, pos.y)
+            Pos.__init__(self, pos.x, pos.y, pos.z)
         elif 'x' and 'y' in kwargs:
             x=kwargs['x']
             y=kwargs['y']
-            Pos.__init__(self,x,y)
+            if 'z' in kwargs:
+                z = kwargs['z']
+            else:
+                z=0
+            Pos.__init__(self,x,y,z)
         else:
             mag=kwargs['magnitud']
             dir=kwargs['dir']
@@ -88,7 +117,7 @@ class Vector(Pos):
 
     def __sub__(self, other):
         p=Pos.__sub__(self,other)
-        return Vector(p)
+        return Vector(pos=p)
 
     def __isub__(self, other):
         Pos.__isub__(self, other)
@@ -97,12 +126,16 @@ class Vector(Pos):
     # Multiplies vector by scalar
     def __mul__(self, other):
         p=Pos.__rmul__(self,other)
-        return Vector(p)
+        return Vector(pos=p)
 
     # Multiplies vector by scalar
     def __rmul__(self, other):
         p=Pos.__rmul__(self,other)
-        return Vector(p)
+        return Vector(pos=p)
+
+    def __truediv__(self,value):
+        p=Pos.__truediv__(self,value)
+        return Vector(pos=p)
 
     @property
     def pos(self):
@@ -110,10 +143,11 @@ class Vector(Pos):
 
     @property
     def magnitude(self):
-        v=math.sqrt((self.x)**2 + (self.y)**2)
+        v=math.sqrt((self.x)**2 + (self.y)**2 + (self.z)**2)
         return v
 
     # Modifies the magnitud of the vector maintaining the origin
+    # careful. Only works in the x,y plane
     @magnitude.setter
     def magnitude(self,v):
         alfa=self.direction_radians
@@ -154,6 +188,38 @@ class Vector(Pos):
                 else:
                     v=alfa+math.pi
         return v
+
+    def dot_product(self,other):
+        a=(self.x*other.x)+(self.y*other.y)+(self.z*other.z)
+        return a
+
+    def cross_product(self,other):
+        x=(self.y*other.z)-(self.z*other.y)
+        y=(self.z*other.x)-(self.x*other.z)
+        z=(self.x*other.y)-(self.y*other.x)
+        p=Pos(x,y,z)
+        return Vector(pos=p)
+        # a=self.magnitude
+        # b=other.magnitude
+        # alfa=self.angle_radians(other)
+        # crossp=a*b*math.sin(alfa)
+        # p=Pos(0,0,crossp)
+        # return Vector(pos=p)
+
+
+    def angle_radians(self,other):
+        dotp=self.dot_product(other)
+        m1=self.magnitude
+        m2=other.magnitude
+        cosalfa=dotp/(m1*m2)
+        alfa=math.acos(cosalfa)
+        return alfa
+
+    # returns angle in degrees formed by two vectors
+    def angle(self,other):
+        r=self.angle_radians(other)
+        return math.degrees(r)
+
 
 # the reference frame for the rectangle is Cartesian
 class Rectangle:

@@ -66,21 +66,25 @@ class View:
         r = Rectangle(0, 0, 100, 100)
         # Moves the body to match the position of the ship
         r.center = s.pos
+        #print("pos "+str(s.pos))
         # Translates the coordinates of the body
         # uses both corners to determine the width and height translated
         topleft=self.trans(Pos(r.left,r.top))
+        #print("topleft " + str(topleft))
         bottomright=self.trans(Pos(r.right,r.bottom))
         w=bottomright.x-topleft.x
         h=bottomright.y-topleft.y
         # Draws the body of the ship in the Display
-        if w<50:
+        if w<=50:
             centerx=topleft.x+(w/2)
             centery=topleft.y+(h/2)
             newx=centerx-(DEFAULT_SHIP_SIZE/2)
             newy=centery-(DEFAULT_SHIP_SIZE/2)
             self.display.draw_rectangle((newx,newy),DEFAULT_SHIP_SIZE,DEFAULT_SHIP_SIZE)
+            #print("newxy "+str(newx)+","+str(newy))
         else:
             self.display.draw_rectangle(topleft.coords(),w,h)
+            #print("topleft "+str(topleft.coords()))
         # Draws the velocity vector
         alfa=s.velocity.direction_radians
         x2=20*math.cos(alfa)
@@ -92,9 +96,13 @@ class View:
         self.display.draw_line(pos1,pos2)
 
         # Projection
-        self.display.draw_path(s.path)
+        if s.path:
+            path_conv = [self.trans(p) for p in s.path]
+            self.display.draw_path(path_conv)
 
-        self.display.draw_text(s.primary.name,bottomright)
+        if s.orbit:
+            self.draw_orbit(s.orbit)
+        self.display.draw_text(s.name,bottomright)
 
 
     def draw_planet(self,planet):
