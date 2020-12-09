@@ -63,7 +63,8 @@ class Body:
                     break
         return object
 
-
+    #fixme This uses self.T that is not defined
+    #
     # gives the position of the body in the orbit and the time after periapisis (seconds)
     # at a given angle of the true anomaly
     def pos_at_angle(self, angle):
@@ -89,7 +90,8 @@ class Body:
         return (pos,time)
 
     # all the crap about the anomalies HAS to be relative to the orbit, no absolute values
-
+    #fixme This uses self.T that is not defined. It is defined in the class Planet
+    #
     # sets the pos of the body according to the time (in seconds) since the periapsis
     def set_pos_time(self, t):
         # E is the (angle) eccentric anomaly t seconds after the periapsis
@@ -112,12 +114,14 @@ class Body:
         self.time = t
         return pos
 
+    #fixme. This is only valid for elliptical orbits
     def get_eccentric_anomaly_pos(self):
         # get the pos of eccentric anomaly
         y = self.pos.x * (self.orbit.a / self.orbit.b)
         E = Pos(x, y)
         return E
 
+    # fixme. This is only valid for elliptical orbits
     # returns the angle of the true anomaly (in degrees)
     def get_true_anomaly(self):
         # calculates distance from the current position to the focus
@@ -347,10 +351,12 @@ class SSystem:
 
     def project_ships(self):
         for s in self.ships:
-            (e, peri, apo, incl) = s.orbital_params()
+            (a, b, e, peri, apo, incl) = s.orbital_params()
             if e<1:
                 o=Orbit(focus1=s.primary.pos,peri=peri,apo=apo,incl=incl)
                 s.orbit=o
+            if e>1:
+                pass
 
 # A body that is not on rails
 class Ship:
@@ -462,7 +468,7 @@ class Ship:
         peri=a-c
         apo=a+c
 
-        return(ecc,peri,apo,incl)
+        return(a,b,ecc,peri,apo,incl)
 
 
 

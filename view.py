@@ -164,7 +164,7 @@ class View:
                     x2=ellipse_area.right-EPSILON
                 elif ny==1:
                     # dont know why we get here
-                    print(ypoints[0])
+                    print("What?! ",ypoints[0])
                     pass
                 else:
                     x1 = ypoints[0].x

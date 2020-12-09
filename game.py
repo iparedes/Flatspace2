@@ -13,6 +13,11 @@ import pygame as pg
 #todo draw path travelled by ships
 #todo needs logging badly
 
+#todo difference between primary and SOI body
+#todo if when projecting is not an ellipse, go through the chain of parent bodies
+#todo draw hyperbolic orbit
+#todo use go on rails for time rates bigger than a threshold
+
 
 DATA_FILE='data3'
 

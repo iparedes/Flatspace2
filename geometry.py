@@ -1,5 +1,15 @@
 import math
 
+
+class Error(Exception):
+    """Base class for other exceptions"""
+    pass
+
+
+class EccentricityError(Error):
+    """Raised when the input value is too small"""
+    pass
+
 class Pos:
 
     # Our space is flat, so we will only use x and y coords
@@ -308,7 +318,6 @@ class Rectangle:
         self._left=v-self.width
         self._center.x=xc
 
-
     @property
     def top(self):
         return self._top
@@ -348,22 +357,14 @@ class Rectangle:
         self._top=self._center.y + int(v / 2)
         self._bottom=self._top-self._height
 
-class Ellipse:
-    # a:semi-major axis
-    # b:semi-minor axis
-    # c: distance from center to focii
-    # center: Pos, center of the ellipse
-    # focus1: Pos of the left focus (the one to the left of the center when incl=0)
-    # focus2: Pos of the right focus (the one to the right of the center when incl=0)
-    # incl: in degrees, counterclockwise from the X axis
-    def __init__(self,a,b,center=None, focus1=None, focus2=None, incl=0):
-        if (a<b):
-            (a,b)=(b,a)
 
+class Conic:
+    def __init__(self,a,e,center=None, focus1=None, focus2=None, incl=0):
         self._incl=incl
         self._a=a
-        self._b=b
-        self.c = math.sqrt((a ** 2) - (b ** 2))
+        self._e=e
+        self.c=self._e*self._a
+        self._b=None
 
         if center != None:
             self.center=center
@@ -372,7 +373,7 @@ class Ellipse:
         if focus2 != None:
             self.focus2=focus2
         # c: distance from center to focus
-        self._accelerate_calcs()
+        #self._accelerate_calcs()
 
     def _accelerate_calcs(self):
         self.a2 = self.a ** 2
@@ -388,33 +389,14 @@ class Ellipse:
         return t
 
     @property
-    def a(self):
-        return self._a
-    @a.setter
-    def a(self,v):
-        self._a=v
-        self.c=math.sqrt((self._a ** 2) - (self._b ** 2))
-        # force the update of the focii
-        self.center=self.center
+    def incl(self):
+        return self._incl
+    @incl.setter
+    def incl(self,val):
+        self._incl=val
         self._accelerate_calcs()
-
-    @property
-    def b(self):
-        return self._b
-    @b.setter
-    def b(self,v):
-        self._b=v
-        self.c = math.sqrt((self._a ** 2) - (self._b ** 2))
-        # force the update of the focii
+        # forces the update of the focii
         self.center=self.center
-        self._accelerate_calcs()
-
-    # @property
-    # def pos(self):
-    #     return self._pos
-    # @pos.setter
-    # def pos(self,v):
-    #     self._pos=v
 
     @property
     def focus1(self):
@@ -454,17 +436,300 @@ class Ellipse:
         self._focus1=pos-delta
         self._focus2=pos+delta
 
-    @property
-    def incl(self):
-        return self._incl
-    @incl.setter
-    def incl(self,val):
-        self._incl=val
-        self._accelerate_calcs()
-        # forces the update of the focii
-        self.center=self.center
+    def intersect_points_with_rect(self,rect):
+        pointsx=[]
+        ps=self.intersect_points_X(rect.left)
+        for p in ps:
+            if rect.belongs(p):
+                pointsx.append(p)
+        ps=self.intersect_points_X(rect.right)
+        for p in ps:
+            if rect.belongs(p):
+                pointsx.append(p)
 
-    # returns a rectangle in absolute coordinates that contains the orbit
+        pointsy=[]
+        ps=self.intersect_points_Y(rect.top)
+        for p in ps:
+            if rect.belongs(p):
+                pointsy.append(p)
+
+        ps=self.intersect_points_Y(rect.bottom)
+        for p in ps:
+            if rect.belongs(p):
+                pointsy.append(p)
+
+        return {'x':pointsx,'y':pointsy}
+
+
+class Hyperbola(Conic):
+
+    # a:semi-major axis
+    # b:semi-minor axis
+    # c: distance from center to focii
+    # e: eccentricity
+    # focus1: Pos of the right focus (the one to the right of the center when incl=0)
+    # focus2: Pos of the left focus (the one to the left of the center when incl=0)
+    def __init__(self,a,e,center=None,focus1=None,focus2=None,incl=0):
+        if e<1:
+            raise Exception("Eccentricity Error")
+        Conic.__init__(self,a=a,e=e,center=center,focus1=focus1,focus2=focus2,incl=incl)
+        #self._b=self._a*math.sqrt((self._e**2)-1)
+        self._b = math.sqrt((self.c ** 2) - (self._a ** 2))
+        self._accelerate_calcs()
+
+    @property
+    def a(self):
+        return self._a
+    # modifies the semi-major axis maintaining the eccentricity
+    @a.setter
+    def a(self,v):
+        self._a=v
+        #self.c=math.sqrt((self._a ** 2) - (self._b ** 2))
+        self.c=self._a*self._e
+        self._b=math.sqrt((self._c ** 2) - (self.a ** 2))
+        # force the update of the focii
+        self.center=self.center
+        self._accelerate_calcs()
+
+    @property
+    def b(self):
+        return self._b
+    # modifies the semi-minor axis maintaining the eccentricity
+    @b.setter
+    def b(self,v):
+        self._b=v
+        self._a=self._b/math.sqrt((self._e**2)-1)
+        #self.c = math.sqrt((self._a ** 2) - (self._b ** 2))
+        self.c = self._a * self._e
+        # force the update of the focii
+        self.center=self.center
+        self._accelerate_calcs()
+
+    @property
+    # returns Pos of vertex closer to focus1
+    def v1(self):
+        x=self.center.x
+        y=self.center.y
+        vx = x + (self.a * math.cos(math.radians(self.incl)))
+        vy = y + (self.a * math.sin(math.radians(self.incl)))
+        return(Pos(vx,vy))
+
+    @property
+    # returns Pos of vertex closer to focus2
+    def v2(self):
+        x=self.center.x
+        y=self.center.y
+        vx = x - (self.a * math.cos(math.radians(self.incl)))
+        vy = y - (self.a * math.sin(math.radians(self.incl)))
+        return(Pos(vx,vy))
+
+
+    # returns the intersection points of the hyperbola with a vertical line in X
+    def intersect_points_X(self,x):
+        # the formulas assume that the ellipse is centered at (0,0)
+        #  so first, we move the vertical line according to the shift
+        x-=self.center.x
+        # later we need to shift the intersection points
+
+        results=[]
+
+        # Intersects vertical, x=K
+        A=(self.b2*self.sin2)-(self.a2*self.cos2)
+        B=2*x*self.sin*self.cos*(self.b2+self.a2)
+        C=(x**2)*((self.b2*self.cos2)-(self.a2*self.sin2))-(self.a2*self.b2)
+        sqterm=(B**2)-(4*A*C)
+        if sqterm>=0:
+            valYmenos=(-B-(math.sqrt(sqterm)))/(2*A)
+            results.append(Pos(x+self.center.x,valYmenos+self.center.y))
+            valYmas=(-B+(math.sqrt(sqterm)))/(2*A)
+            results.append(Pos(x+self.center.x,valYmas+self.center.y))
+        return results
+
+    # returns the intersection points of the hyperbola with a horizontal line in y
+    def intersect_points_Y(self,y):
+        y-=self.center.y
+
+        results=[]
+        a2=self.a**2
+        b2=self.b**2
+        sin=math.sin(math.radians(self.incl))
+        cos = math.cos(math.radians(self.incl))
+        sin2=sin**2
+        cos2=cos**2
+
+        # Intersects horizontal, y=K
+        A=(b2*cos2)-(a2*sin2)
+        B=2*y*sin*cos*(b2+a2)
+        C=(y**2)*((b2*sin2)-(a2*cos2))-(a2*b2)
+        sqterm=(B**2)-(4*A*C)
+        if sqterm>=0:
+            valXmas=(-B+math.sqrt(sqterm))/(2*A)
+            results.append(Pos(valXmas+self.center.x,y+self.center.y))
+            valXmenos=(-B-math.sqrt(sqterm))/(2*A)
+            results.append(Pos(valXmenos+self.center.x,y+self.center.y))
+        return results
+
+
+    def paths(self,x1,x2,npoints):
+        vertx=self.v2.x
+        if (x1>x2):
+            (x1,x2)=(x2,x1)
+        step=(x2-x1)/npoints
+        top=[]
+        tail=[]
+        x=x1
+        while x<vertx:
+            vals=self._y(x)
+            if vals:
+                top.append(Pos(x,vals[0]))
+                tail.insert(0,Pos(x, vals[1]))
+            x+=step
+
+        valsy=self._y(vertx)
+        top.append(Pos(vertx, valsy[0]))
+        tail.insert(0, Pos(vertx, valsy[1]))
+        path1=top+tail
+        top=[]
+        tail=[]
+
+        vertx=self.v1.x
+        valsy = self._y(vertx)
+        #top.append(Pos(x, valsy[0]))
+        #tail.insert(0, Pos(x, valsy[1]))
+        x=vertx
+        while x<=x2:
+            vals=self._y(x)
+            if vals:
+                top.append(Pos(x,vals[0]))
+                tail.insert(0,Pos(x, vals[1]))
+            x+=step
+        path2=top+tail
+        return(path1,path2)
+
+
+
+
+
+
+    # returns a tuple with two paths
+    # each path has a side of the hyperbola for a number of npoints between x1 and x2
+    def paths_old(self,x1,x2,npoints):
+        #x1 -= self.center.x
+        #x2 -= self.center.x
+        top1=[]
+        tail1=[]
+        top2=[]
+        tail2=[]
+
+
+        if (x1>x2):
+            (x1,x2)=(x2,x1)
+        step=(x2-x1)/npoints
+
+        middle=self.center.x
+        x=x1
+        if x<middle:
+            activepath=[top1,tail1]
+        else:
+            activepath =[top2,tail2]
+
+        while x<x2:
+            vals=self._y(x)
+            if vals:
+                #path1.append(Pos(x,vals[0])+self.center)
+                #path2.append(Pos(x, vals[1])+self.center)
+
+                #path1.append(Pos(x,vals[0]))
+                #path2.append(Pos(x, vals[1]))
+                #activepath[0].append(Pos(x,vals[0]))
+                #activepath[1].append(Pos(x, vals[1]))
+                activepath[0].append(Pos(x,vals[0]))
+                activepath[1].insert(0,Pos(x, vals[1]))
+
+
+            x+=step
+            if x < middle:
+                activepath = [top1, tail1]
+            else:
+                activepath = [top2, tail2]
+
+        vals=self._y(x2)
+        if vals:
+            #path1.append(Pos(x,vals[0])+self.center)
+            #path2.append(Pos(x, vals[1])+self.center)
+            #path1.append(Pos(x, vals[0]))
+            #path2.append(Pos(x, vals[1]))
+            #activepath[0].append(Pos(x, vals[0]))
+            #activepath[1].append(Pos(x, vals[1]))
+
+            activepath[0].append(Pos(x, vals[0]))
+            activepath[1].insert(0, Pos(x, vals[1]))
+
+
+        path1=top1+tail1
+        path2 = top2 + tail2
+        return (path1,path2)
+
+
+    def _y(self,x):
+        x-=self.center.x
+        A = (self.b2 * self.sin2) - (self.a2 * self.cos2)
+        B = 2 * x * self.sin * self.cos * (self.b2 + self.a2)
+        C = (x ** 2) * ((self.b2 * self.cos2) - (self.a2 * self.sin2)) - (self.a2 * self.b2)
+        sqterm = (B ** 2) - (4 * A * C)
+        if sqterm >= 0:
+            valYmenos = (-B - (math.sqrt(sqterm))) / (2 * A)
+            valYmas = (-B + (math.sqrt(sqterm))) / (2 * A)
+            return(valYmenos+self.center.y,valYmas+self.center.y)
+        else:
+            return None
+
+class Ellipse(Conic):
+    # a:semi-major axis
+    # b:semi-minor axis
+    # c: distance from center to focii
+    # center: Pos, center of the ellipse
+    # focus1: Pos of the right focus (the one to the right of the center when incl=0)
+    # focus2: Pos of the left focus (the one to the left of the center when incl=0)
+    # incl: in degrees, counterclockwise from the X axis
+    def __init__(self,a,e,center=None, focus1=None, focus2=None, incl=0):
+        if e>=1:
+            raise Exception("Eccentricity Error")
+        Conic.__init__(self,a=a,e=e,center=center,focus1=focus1,focus2=focus2,incl=incl)
+        #self._b=self._a*math.sqrt(1-(self._e**2))
+        self._b=math.sqrt((self._a**2)-(self.c**2))
+        self._accelerate_calcs()
+
+    @property
+    def a(self):
+        return self._a
+    # modifies the semi-major axis maintaining the eccentricity
+    @a.setter
+    def a(self,v):
+        self._a=v
+        #self.c=math.sqrt((self._a ** 2) - (self._b ** 2))
+        self.c=self._a*self._e
+        self._b=math.sqrt((self._a ** 2) - (self.c ** 2))
+        # force the update of the focii
+        self.center=self.center
+        self._accelerate_calcs()
+
+    @property
+    def b(self):
+        return self._b
+    # modifies the semi-minor axis maintaining the eccentricity
+    @b.setter
+    def b(self,v):
+        self._b=v
+        self._a=self._b/math.sqrt(1-(self._e**2))
+        #self.c = math.sqrt((self._a ** 2) - (self._b ** 2))
+        self.c = self._a * self._e
+        # force the update of the focii
+        self.center=self.center
+        self._accelerate_calcs()
+
+
+    # returns a rectangle in absolute coordinates that contains the ellipse
     @property
     def area(self):
         #a2cos2=(self.a**2)*((math.cos(math.radians(self.incl)))**2)
@@ -540,60 +805,6 @@ class Ellipse:
             results.append(Pos(valXmenos+self.center.x,y+self.center.y))
         return results
 
-    def intersect_points_with_rect(self,rect):
-        pointsx=[]
-        ps=self.intersect_points_X(rect.left)
-        for p in ps:
-            if rect.belongs(p):
-                pointsx.append(p)
-        ps=self.intersect_points_X(rect.right)
-        for p in ps:
-            if rect.belongs(p):
-                pointsx.append(p)
-
-        pointsy=[]
-        ps=self.intersect_points_Y(rect.top)
-        for p in ps:
-            if rect.belongs(p):
-                pointsy.append(p)
-
-        ps=self.intersect_points_Y(rect.bottom)
-        for p in ps:
-            if rect.belongs(p):
-                pointsy.append(p)
-
-        return {'x':pointsx,'y':pointsy}
-
-
-    # returns a tuple with two paths
-    # the paths are the solutions (-/+) of the ellipse for a number of npoints between x1 and x2
-    def paths(self,x1,x2,npoints):
-        #x1 -= self.center.x
-        #x2 -= self.center.x
-        path1=[]
-        path2=[]
-        if (x1>x2):
-            (x1,x2)=(x2,x1)
-        step=(x2-x1)/npoints
-
-        x=x1
-        while x<x2:
-            vals=self._y(x)
-            if vals:
-                #path1.append(Pos(x,vals[0])+self.center)
-                #path2.append(Pos(x, vals[1])+self.center)
-                path1.append(Pos(x,vals[0]))
-                path2.append(Pos(x, vals[1]))
-
-            x+=step
-        vals=self._y(x2)
-        if vals:
-            #path1.append(Pos(x,vals[0])+self.center)
-            #path2.append(Pos(x, vals[1])+self.center)
-            path1.append(Pos(x, vals[0]))
-            path2.append(Pos(x, vals[1]))
-
-        return (path1,path2)
 
     # def paths(self,x1,x2,npoints):
     #     x1 -= self.center.x
@@ -625,6 +836,36 @@ class Ellipse:
     #
     #         x+=step
     #     return (path1,path2)
+
+    # returns a tuple with two paths
+    # the paths are the solutions (-/+) of the ellipse for a number of npoints between x1 and x2
+    def paths(self,x1,x2,npoints):
+        #x1 -= self.center.x
+        #x2 -= self.center.x
+        path1=[]
+        path2=[]
+        if (x1>x2):
+            (x1,x2)=(x2,x1)
+        step=(x2-x1)/npoints
+
+        x=x1
+        while x<x2:
+            vals=self._y(x)
+            if vals:
+                #path1.append(Pos(x,vals[0])+self.center)
+                #path2.append(Pos(x, vals[1])+self.center)
+                path1.append(Pos(x,vals[0]))
+                path2.append(Pos(x, vals[1]))
+
+            x+=step
+        vals=self._y(x2)
+        if vals:
+            #path1.append(Pos(x,vals[0])+self.center)
+            #path2.append(Pos(x, vals[1])+self.center)
+            path1.append(Pos(x, vals[0]))
+            path2.append(Pos(x, vals[1]))
+
+        return (path1,path2)
 
 
     def _y(self,x):

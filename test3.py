@@ -1,55 +1,61 @@
 from fspace import *
 from copy import copy, deepcopy
 from geometry import *
+from display import *
+from view import *
+import pygame as pg
+import sys
+import time
+
+done=False
+
+def event_loop():
+    global done
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            done = True
 
 
-# v1=Vector(x=2,y=3,z=4)
-# v2=Vector(x=5,y=6,z=7)
-# w=v1.cross_product(v2)
-# print(w)
+Display = Display(1024)
+View=View(Display,width=2048)
+area=View.area
+#Display.draw_Xmarks_cartesian(0,area)
+#Display.draw_Ymarks_cartesian(0,area)
+
+#eli=Ellipse(400,0.9,focus1=Pos(0,0),incl=30)
+hyp=Hyperbola(200,3.01,focus1=Pos(0,0))
+hyp.center=Pos(0,0)
+(p1,p2)=hyp.paths(area.left,area.right,100)
+p1c = [View.trans(p) for p in p1]
+p2c = [View.trans(p) for p in p2]
+Display.draw_path(p1c)
+Display.draw_path(p2c)
+
+def update(cont):
+    if cont==1:
+        eli.a=50
+        return
+    if cont==2:
+        eli.b=100
+        return
+    if cont==-1:
+        eli.focus2=Pos(0,0)
+        return
 
 
+cont=0
 
+while not done:
+    #Display.screen.fill((0, 0, 0))
+    event_loop()
+    Display.draw_line_cartesian(Pos(0, area.top), Pos(0, area.bottom), area)
+    Display.draw_line_cartesian(Pos(area.left, 0), Pos(area.right, 0), area)
 
-sol=Sun("sol",2e30,Pos(0,0),7e8)
+    #Display.draw_ellipse_cartesian(eli,area)
+    pg.display.update()
+    #update(cont)
+    time.sleep(1)
+    #cont+=1
+pg.quit()
+sys.exit()
 
-ship=Ship(sol,"hop",6e24,Pos(1.5e11,1e7),Vector(x=0,y=3e4))
-
-(peri,apo,incl)=ship.orbital_params()
-print(peri,apo,incl)
-
-#
-# p1=Body(sol,"p1")
-# p2=Body(sol,"p2")
-# p3=Body(sol,"p3")
-# sol.satellites=[p1,p2,p3]
-#
-# otrosol=deepcopy(sol)
-#
-# sol.satellites[1].name="xxx"
-
-# p=Pos(1,2,3)
-# q=p/7
-# print(q)
-# print(q.coordZ())
-#
-exit()
-v1=Vector(x=2,y=0,z=7)
-
-w=v1/2
-print(w)
-print(w.coordZ())
-
-exit()
-v2=Vector(x=2,y=2)
-
-w=v1.cross_product(v2)
-
-print(w)
-print(w.coordZ())
-z=w/1.7
-print(z)
-print(z.coordZ())
-
-
-pass
