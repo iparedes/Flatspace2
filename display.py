@@ -99,10 +99,28 @@ class Display:
             pg.draw.line(self.screen,WHITE,p1.coords(),p2.coords(),LINE_WIDTH)
             y-=1
 
-    def draw_line(self,p1,p2):
+    def draw_line_cartesian(self,line,area):
+        points=[]
+        for l in area.border_lines:
+            p=line.intersection(l)
+            if p:
+                if area.belongs(p):
+                    points.append(p)
+        if len(points)==2:
+            x1 = points[0].x
+            x2 = points[1].x
+            y1 = line.y(x1)
+            y2 = line.y(x2)
+            p1=Pos(x1,y1)
+            p2 = Pos(x2, y2)
+            self.draw_segment_cartesian(p1,p2,area)
+
+
+
+    def draw_segment(self, p1, p2):
         pg.draw.line(self.screen,WHITE,p1.coords(),p2.coords(),LINE_WIDTH)
 
-    def draw_line_cartesian(self,pos1,pos2,area):
+    def draw_segment_cartesian(self, pos1, pos2, area):
         p1=self.trans(pos1,area)
         p2 = self.trans(pos2, area)
         pg.draw.line(self.screen,WHITE,p1.coords(),p2.coords(),LINE_WIDTH)

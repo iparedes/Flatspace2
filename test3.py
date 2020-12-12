@@ -16,6 +16,7 @@ def event_loop():
             done = True
 
 
+
 Display = Display(1024)
 View=View(Display,width=2048)
 area=View.area
@@ -25,11 +26,16 @@ area=View.area
 #eli=Ellipse(400,0.9,focus1=Pos(0,0),incl=30)
 hyp=Hyperbola(200,3.01,focus1=Pos(0,0))
 hyp.center=Pos(0,0)
-(p1,p2)=hyp.paths(area.left,area.right,100)
+hyp.incl=30
+(p1,p2)=hyp.paths(area.left,area.right,200)
 p1c = [View.trans(p) for p in p1]
 p2c = [View.trans(p) for p in p2]
 Display.draw_path(p1c)
 Display.draw_path(p2c)
+
+line1=hyp.asymptote1()
+line2=hyp.asymptote2()
+
 
 def update(cont):
     if cont==1:
@@ -48,13 +54,15 @@ cont=0
 while not done:
     #Display.screen.fill((0, 0, 0))
     event_loop()
-    Display.draw_line_cartesian(Pos(0, area.top), Pos(0, area.bottom), area)
-    Display.draw_line_cartesian(Pos(area.left, 0), Pos(area.right, 0), area)
+    Display.draw_segment_cartesian(Pos(0, area.top), Pos(0, area.bottom), area)
+    Display.draw_segment_cartesian(Pos(area.left, 0), Pos(area.right, 0), area)
+    Display.draw_line_cartesian(line1, area)
+    Display.draw_line_cartesian(line2, area)
 
     #Display.draw_ellipse_cartesian(eli,area)
     pg.display.update()
     #update(cont)
-    time.sleep(1)
+    #time.sleep(1)
     #cont+=1
 pg.quit()
 sys.exit()
