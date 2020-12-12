@@ -202,7 +202,13 @@ class Orbit():
         self.a = (self.peri + self.apo) / 2
         self.c = self.a - self.peri
         self.b = int(math.sqrt((self.a ** 2) - (self.c ** 2)))
-        self.ellipse=Ellipse(self.a,self.b,focus1=focus1,incl=incl)
+
+        # eccentricity
+        e=math.sqrt(1-((self.b**2)/(self.a**2)))
+        if e<1:
+            self.orbital_path=Ellipse(self.a, e, focus1=focus1, incl=incl)
+        else:
+            self.orbital_path = Hyperbola(self.a, e, focus1=focus1, incl=incl)
 
         # to accelerate calculations
         self._costheta = math.cos(math.radians(incl))
@@ -230,25 +236,25 @@ class Orbit():
 
     @property
     def focus(self):
-        return self.ellipse.focus1
+        return self.orbital_path.focus1
     @focus.setter
     def focus(self,pos):
-        self.ellipse.focus1=pos
+        self.orbital_path.focus1=pos
 
     @property
     def center(self):
-        return self.ellipse.center
+        return self.orbital_path.center
 
     @property
     def area(self):
-        return self.ellipse.area
+        return self.orbital_path.area
 
     @property
     def incl(self):
-        return self.ellipse.incl
+        return self.orbital_path.incl
     @incl.setter
     def incl(self,val):
-        self.ellipse.incl=val
+        self.orbital_path.incl=val
 
 class SSystem:
     def __init__(self):

@@ -631,18 +631,24 @@ class Hyperbola(Conic):
         newa=d*math.cos(angle)
         newb = d * math.sin(angle)
 
-        l=Line(slope=(newb/newa),intercept=0)
+        slope=newb/newa
+        inter=self.center.y-(slope*self.center.x)
+
+        l=Line(slope=slope,intercept=inter)
         return l
 
     def asymptote2(self):
         # Need to account for the inclination of the hyperbola
         d=math.sqrt((self.a**2)+(self.b**2))
         beta=math.atan(self.b/self.a)
-        angle=beta+math.radians(self.incl)
+        angle=beta-math.radians(self.incl)
         newa=d*math.cos(angle)
         newb = d * math.sin(angle)
 
-        l=Line(slope=(-newb/newa),intercept=0)
+        slope=-newb/newa
+        inter = self.center.y - (slope * self.center.x)
+
+        l=Line(slope=slope,intercept=inter)
         return l
 
     # returns the intersection points of the hyperbola with a vertical line in X

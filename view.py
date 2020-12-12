@@ -141,7 +141,7 @@ class View:
 
 
     def draw_orbit(self,orbit):
-        ellipse=orbit.ellipse
+        ellipse=orbit.orbital_path
 
         self.display.draw_ex(self.trans(ellipse.focus1))
 
