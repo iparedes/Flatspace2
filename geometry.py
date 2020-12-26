@@ -83,10 +83,10 @@ class Line:
     #   slope ,intercept for y=slope*x+intercept
     #   pos1, pos2 (of type Pos) to create a line between the two points
     def __init__(self, **kwargs):
-        if 'slope' and 'intercept' in kwargs:
+        if all(k in kwargs for k in ("slope","intercept")):
             self.slope = kwargs['slope']
             self.intercept = kwargs['intercept']
-        elif 'p1' and 'p2' in kwargs:
+        elif all(k in kwargs for k in ("p1","p2")):
             p1 = kwargs['p1']
             p2 = kwargs['p2']
             a=p2.x-p1.x
@@ -452,7 +452,8 @@ class Rectangle:
         self._top = self._center.y + int(v / 2)
         self._bottom = self._top - self._height
 
-
+# When creating a conic, need to provide at least one of the reference points (center, focus1, focus2)
+# if multiple are provided, precedence is focus1>focus2>center
 class Conic:
     def __init__(self, a, e, center=None, focus1=None, focus2=None, incl=0):
         self._incl = incl
@@ -461,12 +462,15 @@ class Conic:
         self.c = self._e * self._a
         self._b = None
 
+        if all(v is not None for v in [center,focus1,focus2]):
+            raise SyntaxError("Conic needs at least a point")
+
         if center != None:
             self.center = center
-        if focus1 != None:
-            self.focus1 = focus1
         if focus2 != None:
             self.focus2 = focus2
+        if focus1 != None:
+            self.focus1 = focus1
         # c: distance from center to focus
         # self._accelerate_calcs()
 
@@ -484,9 +488,15 @@ class Conic:
         return t
 
     @property
+    def e(self):
+        return self.c/self._a
+
+    @property
     def incl(self):
         return self._incl
 
+    # Modifications to the inclination take the center as the rotating point
+    # if used for orbits you'll probably want to update the focus afterwards
     @incl.setter
     def incl(self, val):
         self._incl = val
@@ -494,45 +504,6 @@ class Conic:
         # forces the update of the focii
         self.center = self.center
 
-    @property
-    def focus1(self):
-        return self._focus1
-
-    # Moves the ellipse to make focus1 match the position pos
-    @focus1.setter
-    def focus1(self, pos):
-        self._focus1 = pos
-        dy = self.c * math.sin(math.radians(self.incl))
-        dx = self.c * math.cos(math.radians(self.incl))
-        delta = Pos(dx, dy)
-        self._center = pos - delta
-        self._focus2 = self._center - delta
-
-    @property
-    def focus2(self):
-        return self._focus2
-
-    @focus2.setter
-    def focus2(self, pos):
-        self._focus1 = pos
-        dy = self.c * math.sin(math.radians(self.incl))
-        dx = self.c * math.cos(math.radians(self.incl))
-        delta = Pos(dx, dy)
-        self._center = pos + delta
-        self._focus1 = self._center + delta
-
-    @property
-    def center(self):
-        return self._center
-
-    @center.setter
-    def center(self, pos):
-        self._center = pos
-        dy = self.c * math.sin(math.radians(self.incl))
-        dx = self.c * math.cos(math.radians(self.incl))
-        delta = Pos(dx, dy)
-        self._focus1 = pos - delta
-        self._focus2 = pos + delta
 
     def intersect_points_with_rect(self, rect):
         pointsx = []
@@ -565,8 +536,9 @@ class Hyperbola(Conic):
     # b:semi-minor axis
     # c: distance from center to focii
     # e: eccentricity
-    # focus1: Pos of the right focus (the one to the right of the center when incl=0)
-    # focus2: Pos of the left focus (the one to the left of the center when incl=0)
+    # focus1: Pos of the left focus (the one to the left of the center when incl=0)
+    # focus2: Pos of the right focus (the one to the right of the center when incl=0)
+    # Note that the focii location is different to the ellipse
     def __init__(self, a, e, center=None, focus1=None, focus2=None, incl=0):
         if e < 1:
             raise Exception("Eccentricity Error")
@@ -604,6 +576,47 @@ class Hyperbola(Conic):
         # force the update of the focii
         self.center = self.center
         self._accelerate_calcs()
+
+    @property
+    def focus1(self):
+        return self._focus1
+
+    # Moves the hyperbola to make focus1 match the position pos
+    @focus1.setter
+    def focus1(self, pos):
+        self._focus1 = pos
+        dy = self.c * math.sin(math.radians(self.incl))
+        dx = self.c * math.cos(math.radians(self.incl))
+        delta = Pos(dx, dy)
+        self._center = pos + delta
+        self._focus2 = self._center + delta
+
+    @property
+    def focus2(self):
+        return self._focus2
+
+    @focus2.setter
+    def focus2(self, pos):
+        self._focus1 = pos
+        dy = self.c * math.sin(math.radians(self.incl))
+        dx = self.c * math.cos(math.radians(self.incl))
+        delta = Pos(dx, dy)
+        self._center = pos - delta
+        self._focus1 = self._center - delta
+
+    @property
+    def center(self):
+        return self._center
+
+    @center.setter
+    def center(self, pos):
+        self._center = pos
+        dy = self.c * math.sin(math.radians(self.incl))
+        dx = self.c * math.cos(math.radians(self.incl))
+        delta = Pos(dx, dy)
+        self._focus1 = pos + delta
+        self._focus2 = pos - delta
+
 
     @property
     # returns Pos of vertex closer to focus1
@@ -788,6 +801,9 @@ class Hyperbola(Conic):
         path2 = top2 + tail2
         return (path1, path2)
 
+    # returns the two archs that compose the hyperbola
+    # if pos is different than None, it only returns the closest arch
+    # (used to obtain an orbital path)
     def paths(self, x1, x2, npoints):
         path1 = []
         path2 = []
@@ -832,6 +848,7 @@ class Hyperbola(Conic):
             #vertical asymptote
             path1.sort(key=lambda p: p.y)
             path2.sort(key=lambda p: p.y)
+
         return (path1, path2)
 
     def _y(self, x):
@@ -893,6 +910,47 @@ class Ellipse(Conic):
         # force the update of the focii
         self.center = self.center
         self._accelerate_calcs()
+
+    @property
+    def focus1(self):
+        return self._focus1
+
+    # Moves the ellipse to make focus1 match the position pos
+    @focus1.setter
+    def focus1(self, pos):
+        self._focus1 = pos
+        dy = self.c * math.sin(math.radians(self.incl))
+        dx = self.c * math.cos(math.radians(self.incl))
+        delta = Pos(dx, dy)
+        self._center = pos - delta
+        self._focus2 = self._center - delta
+
+    @property
+    def focus2(self):
+        return self._focus2
+
+    @focus2.setter
+    def focus2(self, pos):
+        self._focus1 = pos
+        dy = self.c * math.sin(math.radians(self.incl))
+        dx = self.c * math.cos(math.radians(self.incl))
+        delta = Pos(dx, dy)
+        self._center = pos + delta
+        self._focus1 = self._center + delta
+
+    @property
+    def center(self):
+        return self._center
+
+    @center.setter
+    def center(self, pos):
+        self._center = pos
+        dy = self.c * math.sin(math.radians(self.incl))
+        dx = self.c * math.cos(math.radians(self.incl))
+        delta = Pos(dx, dy)
+        self._focus1 = pos - delta
+        self._focus2 = pos + delta
+
 
     # returns a rectangle in absolute coordinates that contains the ellipse
     @property

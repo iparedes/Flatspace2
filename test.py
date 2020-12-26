@@ -39,10 +39,14 @@ def setup():
     global T
     T=Sun(name="Sol",mass=5.97e24, radius=10)
     T.pos=Pos(0,0)
-    global sh
-    sh=Ship(T,"noster",10,Pos(1e6,0))
-    sh.velocity=Vector(pos=Pos(0,5))
-    sh.update_pos(10e-4)
+    global P
+    P=Planet(primary=T,name="pipo",mass=6e24,radius=6e6,peri=1.5e11,apo=1.5e11)
+    (P.pos, P.time) = P.pos_at_angle(30)
+
+    # global sh
+    # sh=Ship(T,"noster",10,Pos(1e6,0))
+    # sh.velocity=Vector(pos=Pos(0,5))
+    # sh.update_pos(10e-4)
 
     # Nice elliptical orbit
     #sh=Ship(T,"noster",10,Pos(200,0))
@@ -50,12 +54,12 @@ def setup():
     #sh.update_pos(10e-4)
 
 
-    (e,peri, apo, incl) = sh.orbital_params()
-    global O
-    if e<1:
-        O=Orbit(focus1=sh.primary.pos,peri=peri,apo=apo,incl=incl)
-    else:
-        O=None
+    # (a, b, ecc, peri, apo, incl)=sh.orbital_params()
+    # global O
+    # if ecc<1:
+    #     O=Orbit(focus=sh.primary,peri=peri,apo=apo,incl=incl)
+    # else:
+    #     O=None
 
 
 
@@ -86,7 +90,9 @@ def draw():
     global T
     #Display.draw_circle_cartesian(T.pos, 1000, area)
     View.draw_planet(T)
-    View.draw_ship(sh)
+    View.draw_planet(P)
+    View.draw_orbit(P.orbit)
+    #View.draw_ship(sh)
     #if O:
      #   View.draw_orbit(O)
 
@@ -100,7 +106,7 @@ def update():
     #     SIGNY=-1
     # elif sh.velocity.y==-10:
     #     SIGNY=1
-    sh.update_pos(10e-3)
+    P.update_pos(3600)
     pass
 
     # while x<=earea.right:
@@ -206,7 +212,7 @@ SIGNY=1
 X=0
 Display = Display(1024)
 
-View=View(Display,width=2048)
+View=View(Display,width=1e12)
 run()
 print("weeey")
 exit(0)

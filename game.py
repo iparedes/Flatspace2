@@ -19,7 +19,7 @@ import pygame as pg
 #todo use go on rails for time rates bigger than a threshold
 
 
-DATA_FILE='data3'
+DATA_FILE='data'
 
 ZOOM_FACTOR = 25
 MOVE_FACTOR = 10
@@ -129,7 +129,6 @@ class Game(object):
                     p1=obj1.pos
                     p2=obj2.pos
                     d=p1.distance(p2)
-                    print("{:.2E}".format(d))
             elif cmd==DISPLAY:
                 dispnum=instr.pop(0)
                 id=instr.pop(0)
@@ -305,7 +304,7 @@ class Game(object):
             self.dt = 1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
             self.dt /=1000 # convert to seconds
-            print(self.dt)
+            #print(self.dt)
 
             if self.time_rate_index!=0:
                 self.SS.update(self.dt)

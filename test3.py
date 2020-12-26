@@ -23,15 +23,32 @@ area=View.area
 #Display.draw_Xmarks_cartesian(0,area)
 #Display.draw_Ymarks_cartesian(0,area)
 
-#eli=Ellipse(400,0.9,focus1=Pos(0,0),incl=30)
-hyp=Hyperbola(200,3.01,focus1=Pos(0,0))
-hyp.center=Pos(100,100)
-hyp.incl=30
+# eli=Ellipse(400,0.9,focus1=Pos(0,0),incl=30)
+# (p1,p2)=eli.paths(area.left,area.right,200)
+# p1c = [View.trans(p) for p in p1]
+# p2c = [View.trans(p) for p in p2]
+# Display.draw_path(p1c)
+# Display.draw_path(p2c)
+# eli2=eli
+# eli2.incl=0
+# (p1,p2)=eli2.paths(area.left,area.right,200)
+# p1c = [View.trans(p) for p in p1]
+# p2c = [View.trans(p) for p in p2]
+# Display.draw_path(p1c)
+# Display.draw_path(p2c)
+
+
+
+hyp=Hyperbola(200,3.01,focus1=Pos(0,0),incl=30)
+# hyp.incl=5
 (p1,p2)=hyp.paths(area.left,area.right,200)
 p1c = [View.trans(p) for p in p1]
 p2c = [View.trans(p) for p in p2]
 Display.draw_path(p1c)
 Display.draw_path(p2c)
+p=Display.trans(hyp.focus1,area)
+Display.draw_ex(p)
+#Display.draw_ex(hyp.focus2)
 
 line1=hyp.asymptote1()
 line2=hyp.asymptote2()
@@ -57,8 +74,8 @@ while not done:
     #Display.draw_segment_cartesian(Pos(0, area.top), Pos(0, area.bottom), area)
     #Display.draw_segment_cartesian(Pos(area.left, 0), Pos(area.right, 0), area)
 
-    Display.draw_line_cartesian(line1, area)
-    Display.draw_line_cartesian(line2, area)
+    #Display.draw_line_cartesian(line1, area)
+    #Display.draw_line_cartesian(line2, area)
 
     #Display.draw_ellipse_cartesian(eli,area)
     pg.display.update()

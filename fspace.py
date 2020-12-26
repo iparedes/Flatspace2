@@ -4,6 +4,7 @@ from itertools import chain
 from copy import copy, deepcopy
 
 G = 6.674E-11  # m3•k-1•s-2.
+NEWTON_THRESHOLD=0.01 # Value used to check the convergence on Newton method to solve Kepler eq
 
 # everything in the universe (planets, ships, ...)
 class Body:
@@ -14,7 +15,7 @@ class Body:
         self.satellites=[]      # orbiting bodies
         self._pos = pos
         self.mass=mass
-        self.time=0             # time after periapsis
+        self._time=0             # time after periapsis
 
     def __iter__(self):
         yield self
@@ -34,6 +35,17 @@ class Body:
         for k, v in self.__dict__.items():
             setattr(result, k, deepcopy(v, memo))
         return result
+
+    @property
+    def time(self):
+        return self._time
+    @time.setter
+
+    # Uberimportant. An update of the time (time after the periapsis), sets the pos
+    #  of the body accordingly
+    def time(self,t):
+        self._time=t
+        self.pos=self.orbit.get_pos_time(t)
 
     @property
     def pos(self):
@@ -63,79 +75,15 @@ class Body:
                     break
         return object
 
-    #fixme This uses self.T that is not defined
-    #
-    # gives the position of the body in the orbit and the time after periapisis (seconds)
-    # at a given angle of the true anomaly
-    def pos_at_angle(self, angle):
-        # angle is the alfa. True anomaly. 0 degrees is at periapsis
-        # orbit.incl is the theta
-        alfa = math.radians(angle)
-        sinalfa = math.sin(alfa)
-        cosalfa = math.cos(alfa)
-        a = self.orbit.a
-        b = self.orbit.b
-        sintheta = self.orbit._sintheta
-        costheta = self.orbit._costheta
-
-        x = int((a * cosalfa * costheta) - (b * sinalfa * sintheta))
-        y = int((a * cosalfa * sintheta) + (b * sinalfa * costheta))
-
-        Q = Pos(x, y)
-        pos = Q + self.orbit.center
-
-        # time after periapsis
-        time=(self.T*alfa)/(2*math.pi)
-
-        return (pos,time)
-
-    # all the crap about the anomalies HAS to be relative to the orbit, no absolute values
-    #fixme This uses self.T that is not defined. It is defined in the class Planet
-    #
-    # sets the pos of the body according to the time (in seconds) since the periapsis
-    def set_pos_time(self, t):
-        # E is the (angle) eccentric anomaly t seconds after the periapsis
-        E = (t * 2 * math.pi) / self.T
-        # calculate the position of E without accounting for the orbit inclination
-        x = self.orbit.a * math.cos(E)
-        y = self.orbit.a * math.sin(E)
-        # calculate the position of the true anomaly
-        # x is the same
-        y = y * (self.orbit.b / self.orbit.a)
-
-        # account for the inclination of the orbit
-        beta = math.radians(self.orbit.incl)
-        newx = (x * math.cos(beta)) - (y * math.sin(beta))
-        newy = (y * math.cos(beta)) + (x * math.sin(beta))
-        x = self.orbit.center.x + newx
-        y = self.orbit.center.y + newy
-        pos = Pos(x, y)
-        self.pos = pos
-        self.time = t
-        return pos
-
-    #fixme. This is only valid for elliptical orbits
-    def get_eccentric_anomaly_pos(self):
-        # get the pos of eccentric anomaly
-        y = self.pos.x * (self.orbit.a / self.orbit.b)
-        E = Pos(x, y)
-        return E
-
-    # fixme. This is only valid for elliptical orbits
-    # returns the angle of the true anomaly (in degrees)
-    def get_true_anomaly(self):
-        # calculates distance from the current position to the focus
-        d = self.pos.distance(self.orbit.focus1)
-        # the sin of the true anomaly is the y coord over the distance
-        nu = math.asin(self.pos.y / d)
-        return math.radians(nu)
-
     # updates the pos of the body in the orbit according to a delta in seconds
     # it only accounts for one level of satellites. Probably should use the iterator here
     def update_pos(self,delta):
-        self.set_pos_time(self.time+delta)
+        self.time+=delta
+        if self.time>=self.orbit.T:
+            self.time=self.time%self.orbit.T
+        self.pos=self.orbit.get_pos_time(self.time)
         for s in self.satellites:
-            s.set_pos_time(self.time+delta)
+            s.update_pos(delta)
 
     def add_satellite(self,s):
         self.satellites.append(s)
@@ -163,14 +111,18 @@ class Planet(Body):
     def __init__(self, primary=None, name="", mass=0, radius=0,peri=0,apo=0,incl=0,init_pos=0):
         Body.__init__(self,primary=primary,name=name,mass=mass)
         self.radius=radius
-        self.orbit=Orbit(self.name,primary.pos,peri,apo,incl)
-        self.T = 0  # Orbital period
-        self.T = (2 * math.pi) * math.sqrt(self.orbit.a ** 3 / (G * self.primary.mass))
-        (self.pos,self.time)=self.pos_at_angle(init_pos)
-        self.SOI=self.orbit.a*((self.mass/primary.mass)**(2/5))
+        self.orbit=Orbit(name=self.name,focus=primary,peri=peri,apo=apo,incl=incl)
+        self.mu=G*self.primary.mass
+        #self.T = 0  # Orbital period
+        # these two should probably be updated always together
+        self.pos=self.orbit.pos_true_anomaly(init_pos)
+        self.time=self.orbit.time_true_anomaly(init_pos)
+        #(self.pos,self.time)=self.orbit.pos_at_angle(init_pos)
+        self.SOI=self.orbit.orbital_path.a*((self.mass/primary.mass)**(2/5))
 
     def __str__(self):
         t=self.name+" mass:"+"{:.2e}".format(self.mass)+" radius: "+"{:.2e}".format(self.radius)+"\n"
+        t+="time: "+str(self.time)+" pos: "+str(self.pos)+"\n"
         t+="SOI: "+"{:.2E}".format(self.SOI)+" Orbit: "+str(self.orbit)
         return t
 
@@ -186,33 +138,67 @@ class Planet(Body):
 
 
 class Orbit():
-    # focus1 is the position of focus1
-    def __init__(self, name="",focus1=None, peri=0, apo=0, incl=0):
-        if (peri > apo):
-            (peri, apo) = (apo, peri)
+    # parameter sets:
+    #   apo,peri,focus, incl=0, name="" has to be a ellipse (apo has not a defined value for hyperbola)
+    #   a,e,focus, incl=0, name=""
+    # focus is the body at the focus1 of the orbital path
+    # incl is the inclination of the orbit
+    def __init__(self, **kwargs):
 
-        self.name=name
-        # Where should I put the incl attribute, in the orbit, or in the ellipse inside the orbit?
-        self.peri = peri
-        self.apo = apo
-
-        # a: semi-major axis
-        # b: semi-minor axis
-        # c: distance from center to focus
-        self.a = (self.peri + self.apo) / 2
-        self.c = self.a - self.peri
-        self.b = int(math.sqrt((self.a ** 2) - (self.c ** 2)))
-
-        # eccentricity
-        e=math.sqrt(1-((self.b**2)/(self.a**2)))
-        if e<1:
-            self.orbital_path=Ellipse(self.a, e, focus1=focus1, incl=incl)
+        if 'name' in kwargs:
+            self.name=kwargs['name']
         else:
-            self.orbital_path = Hyperbola(self.a, e, focus1=focus1, incl=incl)
+            self.name=""
+
+        if 'incl' in kwargs:
+            incl=kwargs['incl']
+        else:
+            incl=0
+
+        if all(k in kwargs for k in ("apo","peri","focus")):
+            peri=kwargs['peri']
+            apo=kwargs['apo']
+            focus=kwargs["focus"]
+            if (peri > apo):
+                (peri, apo) = (apo, peri)
+            self.peri = peri
+            self.apo = apo
+
+            # a: semi-major axis
+            # b: semi-minor axis
+            # c: distance from center to focus
+            a = (self.peri + self.apo) / 2
+            c = a - self.peri
+            b = int(math.sqrt((a ** 2) - (c ** 2)))
+
+            # eccentricity
+            e = math.sqrt(1 - ((b ** 2) / (a ** 2)))
+            if e < 1:
+                self.orbital_path = Ellipse(a, e, focus1=focus.pos, incl=incl)
+                self.T = (2 * math.pi) * math.sqrt(self.orbital_path.a ** 3 / (G * focus.mass))
+            else:
+                raise ValueError("eccentricity >=1 in elliptical orbit")
+
+            pass
+        elif all(k in kwargs for k in ("a","e","focus")):
+            a=kwargs['a']
+            e = kwargs['e']
+            focus = kwargs['focus']
+            if e<1:
+                #ellipse
+                self.orbital_path = Ellipse(a, e, focus1=focus.pos, incl=incl)
+                self.T = (2 * math.pi) * math.sqrt(self.orbital_path.a ** 3 / (G*focus.mass))
+            else:
+                #hyperbola
+                self.orbital_path = Hyperbola(a, e, focus1=focus.pos, incl=incl)
+
+        else:
+            raise SyntaxError("arguments in Orbit")
 
         # to accelerate calculations
         self._costheta = math.cos(math.radians(incl))
         self._sintheta = math.sin(math.radians(incl))
+
 
     def __copy__(self):
         cls = self.__class__
@@ -229,7 +215,7 @@ class Orbit():
         return result
 
     def __str__(self):
-        t="a:"+"{:.2e}".format(self.a)+", "+"b:"+"{:.2e}".format(self.b)+"\n"
+        t="a:"+"{:.2e}".format(self.orbital_path.a)+", "+"b:"+"{:.2e}".format(self.orbital_path.b)+"\n"
         r=self.area
         t+="top:"+"{:.2e}".format(r.top)+", left:"+"{:.2e}".format(r.left)+", bottom:"+"{:.2e}".format(r.bottom)+", right:"+"{:.2e}".format(r.right)+"\n"
         return t
@@ -255,6 +241,66 @@ class Orbit():
     @incl.setter
     def incl(self,val):
         self.orbital_path.incl=val
+
+    # En in radians
+    def Newton_Ellipse(self,M,En):
+        cos=math.cos(En)
+        sin=math.sin(En)
+        e=self.orbital_path.e
+        a=En-((En-(e*sin)-M)/(1-(e*cos)))
+        return a
+
+    # gets pos in the orbit, t seconds after passing the periapsis
+    def get_pos_time(self,t):
+        # Mean anomaly in radians
+        M=(2*math.pi/self.T)*t
+        # Solve Kepler using Newton-Raphson
+        E=M
+        delta=1
+        cont=0
+        while(delta > NEWTON_THRESHOLD):
+            Enew=self.Newton_Ellipse(M,E)
+            delta=abs(Enew-E)
+            E=Enew
+            cont+=1
+        print ("Iterations: "+str(cont))
+        # E is the eccentric anomaly in radians
+        # Calculate the true anomaly using the relation between the tan of the half true anomaly
+        # and the eccentric anomaly
+        e=self.orbital_path.e
+        temp=math.sqrt((1+e)/(1-e))*math.tan(E/2)
+        v=2*math.atan(temp)
+        pos=self.pos_true_anomaly(v)
+        return pos
+
+    def pos_true_anomaly(self,alfa):
+        # alfa is the true anomaly in radians. 0  is at periapsis
+        # orbit.incl is the theta
+        sinalfa = math.sin(alfa)
+        cosalfa = math.cos(alfa)
+        a = self.orbital_path.a
+        b = self.orbital_path.b
+        sintheta = self._sintheta
+        costheta = self._costheta
+
+        x = int((a * cosalfa * costheta) - (b * sinalfa * sintheta))
+        y = int((a * cosalfa * sintheta) + (b * sinalfa * costheta))
+
+        Q = Pos(x, y)
+        pos = Q + self.center
+        return pos
+
+    # gets the time after periapsis corresponding to the true anomaly
+    def time_true_anomaly(self,v):
+        e=self.orbital_path.e
+        num=math.tan(v/2)
+        denom=math.sqrt((1+e)/(1-e))
+        tan12E=num/denom
+        E=2*math.atan(tan12E)
+        M=E-(e*math.sin(E))
+        t=(M*self.T)/(2*math.pi)
+        return t
+
 
 class SSystem:
     def __init__(self):
@@ -288,7 +334,6 @@ class SSystem:
         for p in self.Sol.satellites:
             p.update_pos(delta)
 
-        # todo this is wrong. Should be done as part of the ship update
         # updates the SOI of ships
         for s in self.ships:
             p=s.pos
@@ -308,9 +353,9 @@ class SSystem:
                 cont+=10
         else:
             for s in self.ships:
-                print("Updating ship"+s.name)
+                #print("Updating ship"+s.name)
                 s.update_pos(delta)
-                print(s.pos)
+                #print(s.pos)
 
     def soi_body(self,pos):
         body=None
@@ -352,17 +397,13 @@ class SSystem:
         while cont<=max:
             self.update(step,True)
             cont+=step
-            print("project "+str(cont))
+            #print("project "+str(cont))
         self.projecting = False
 
     def project_ships(self):
         for s in self.ships:
-            (a, b, e, peri, apo, incl) = s.orbital_params()
-            if e<1:
-                o=Orbit(focus1=s.primary.pos,peri=peri,apo=apo,incl=incl)
-                s.orbit=o
-            if e>1:
-                pass
+            s.project()
+
 
 # A body that is not on rails
 class Ship:
@@ -416,6 +457,7 @@ class Ship:
         newpos=deepcopy(self.pos)
         self.path.append(newpos)
         #print(self.velocity)
+        self.project()
 
     def Fg(self):
         d=self.pos.distance(self.primary.pos)
@@ -434,6 +476,13 @@ class Ship:
         return R
 
     # From: https://github.com/cmaureir/python-kepler/blob/master/KeplerianOrbit.py
+    # returns tupla with (all distance units in meters):
+    # a: semi-major axis
+    # b: semi-minor axis
+    # ecc: eccentricity
+    # peri: value of periapsis
+    # apo: value of apoapsis
+    # incl: orbit inclination (degrees)
     def orbital_params(self):
         mu=self.primary.mass*G
 
@@ -450,24 +499,24 @@ class Ship:
         vv=rv/rmag
         ev=tv-vv
 
-        # ev points (I believe) in the direction of the simmetry axis of the ellipse
+        # ev points (I believe) in the direction of the symmetry axis of the ellipse
         horizontal=Vector(pos=Pos(1,0))
         incl=ev.angle(horizontal)
-        print("incl:",incl)
+        #print("incl:",incl)
 
         # Eccentricity
         ecc=ev.magnitude
-        print("ecc: "+str(ecc))
+        #print("ecc: "+str(ecc))
         # semi-major axis
         # a = ( j * j ) / (G * m * | 1 - ecc^2 | )
         k=jv.dot_product(jv)
         factor=abs(1-(ecc**2))
         a=k/(mu*factor)
-        print("a: "+str(a))
+        #print("a: "+str(a))
 
         # semi-minor axis
         b=a*math.sqrt(factor)
-        print("b: "+str(b))
+        #print("b: "+str(b))
 
         # c: distance from center to focus
         c=a*ecc
@@ -476,6 +525,10 @@ class Ship:
 
         return(a,b,ecc,peri,apo,incl)
 
+    def project(self):
+        (a, b, e, peri, apo, incl) = self.orbital_params()
+        o = Orbit(focus=self.primary, a=a, e=e, incl=incl)
+        self.orbit = o
 
 
 
