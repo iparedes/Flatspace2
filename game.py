@@ -171,9 +171,9 @@ class Game(object):
                     xvel = float(items[5])
                     yvel = float(items[6])
                     vel=Vector(x=xvel,y=yvel)
-                    # todo add velocity vector in ship constructor
-                    s=Ship(self.SS.Sol,name,mass,Pos(x,y),vel)
-                    self.SS.ships.append(s)
+                    pos=Pos(x,y)
+                    s=Ship(name,mass,pos,vel)
+                    self.SS.add_ship(s)
                 else:
                     name=items[0]
                     mass=float(items[1])
