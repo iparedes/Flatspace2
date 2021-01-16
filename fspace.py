@@ -286,7 +286,6 @@ class Orbit():
         cos=math.cosh(En)
         sin=math.sinh(En)
         e=self.orbital_path.e
-        #a=e*(E*)/()
         a=En-(((e*sin)-En-M)/((e*cos)-1))
         return a
 
@@ -320,7 +319,6 @@ class Orbit():
             E=M
             delta=1
             cont=0
-            #todo OjO too many iterations
             while(delta > NEWTON_THRESHOLD):
                 Enew=self.Newton_Hyperbola(M,E)
                 delta=abs(Enew-E)
@@ -342,14 +340,26 @@ class Orbit():
         cosalfa = math.cos(alfa)
         a = self.orbital_path.a
         b = self.orbital_path.b
+        e = self.orbital_path.e
         sintheta = self._sintheta
         costheta = self._costheta
 
-        x = int((a * cosalfa * costheta) - (b * sinalfa * sintheta))
-        y = int((a * cosalfa * sintheta) + (b * sinalfa * costheta))
+        # this is wrong, should only work for circular orbits (a=b)
+        # however it gives a good aprox when the position is calculated from the center
+        # (shifted from the center after calculating x and y
+        #x = int((a * cosalfa * costheta) - (b * sinalfa * sintheta))
+        #y = int((a * cosalfa * sintheta) + (b * sinalfa * costheta))
+
+        semilatus=self.orbital_path.l
+        r=semilatus/(1+(e*cosalfa))
+
+        x = int((r * cosalfa * costheta) - (r * sinalfa * sintheta))
+        y = int((r * cosalfa * sintheta) + (r * sinalfa * costheta))
+
 
         Q = Pos(x, y)
-        pos = Q + self.center
+        pos = Q + self.focus
+        #pos = Q + self.orbital_path.center
         return pos
 
     def pos_true_anomaly_hyperbola(self,alfa):
@@ -357,23 +367,23 @@ class Orbit():
         # orbit.incl is the theta
         sinalfa = math.sin(alfa)
         cosalfa = math.cos(alfa)
-        a = self.orbital_path.a
+        a = self.orbital_path.c-self.orbital_path.a
         b = self.orbital_path.b
         sintheta = self._sintheta
         costheta = self._costheta
         e=self.orbital_path.e
 
-        latus=2*(b**2)/a
-        r=latus/(1+(e*cosalfa))
+        semilatus=self.orbital_path.l
+        r=semilatus/(1+(e*cosalfa))
 
         x=r*cosalfa
         y=r*sinalfa
 
         rot_x = int((x * costheta) - (y * sintheta))
-        rot_y = int((x * sintheta) + (b * costheta))
+        rot_y = int((x * sintheta) + (y * costheta))
 
         Q = Pos(rot_x, rot_y)
-        pos = Q + self.center
+        pos = Q + self.focus
         return pos
 
 

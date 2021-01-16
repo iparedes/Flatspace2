@@ -488,6 +488,8 @@ class Conic:
         return t
 
     @property
+    # the eccentricity formula is the same for all the conics,
+    # however, c is calculated in different ways
     def e(self):
         return self.c/self._a
 
@@ -545,6 +547,8 @@ class Hyperbola(Conic):
         Conic.__init__(self, a=a, e=e, center=center, focus1=focus1, focus2=focus2, incl=incl)
         # self._b=self._a*math.sqrt((self._e**2)-1)
         self._b = math.sqrt((self.c ** 2) - (self._a ** 2))
+        # semi-latus rectum
+        self.l=self._semilatus
         self._accelerate_calcs()
 
     @property
@@ -558,6 +562,7 @@ class Hyperbola(Conic):
         # self.c=math.sqrt((self._a ** 2) - (self._b ** 2))
         self.c = self._a * self._e
         self._b = math.sqrt((self._c ** 2) - (self.a ** 2))
+        self.l = self._semilatus
         # force the update of the focii
         self.center = self.center
         self._accelerate_calcs()
@@ -573,9 +578,15 @@ class Hyperbola(Conic):
         self._a = self._b / math.sqrt((self._e ** 2) - 1)
         # self.c = math.sqrt((self._a ** 2) - (self._b ** 2))
         self.c = self._a * self._e
+        self.l = self._semilatus
         # force the update of the focii
         self.center = self.center
         self._accelerate_calcs()
+
+    @property
+    def _semilatus(self):
+        l=(self.b**2)/self.a
+        return l
 
     @property
     def focus1(self):
@@ -879,6 +890,8 @@ class Ellipse(Conic):
         Conic.__init__(self, a=a, e=e, center=center, focus1=focus1, focus2=focus2, incl=incl)
         # self._b=self._a*math.sqrt(1-(self._e**2))
         self._b = math.sqrt((self._a ** 2) - (self.c ** 2))
+        # semi-latus rectum
+        self.l=self._semilatus
         self._accelerate_calcs()
 
     @property
@@ -892,6 +905,8 @@ class Ellipse(Conic):
         # self.c=math.sqrt((self._a ** 2) - (self._b ** 2))
         self.c = self._a * self._e
         self._b = math.sqrt((self._a ** 2) - (self.c ** 2))
+        # updates the semi-latus
+        self.l = self._semilatus
         # force the update of the focii
         self.center = self.center
         self._accelerate_calcs()
@@ -907,9 +922,16 @@ class Ellipse(Conic):
         self._a = self._b / math.sqrt(1 - (self._e ** 2))
         # self.c = math.sqrt((self._a ** 2) - (self._b ** 2))
         self.c = self._a * self._e
+        # updates the semi-latus
+        self.l = self._semilatus
         # force the update of the focii
         self.center = self.center
         self._accelerate_calcs()
+
+    @property
+    def _semilatus(self):
+        l=self.a*(1-(self.e**2))
+        return l
 
     @property
     def focus1(self):

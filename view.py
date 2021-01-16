@@ -61,6 +61,10 @@ class View:
         yp = int((self.display.HEIGHT/self.area.height)*(self.area.top-pos.y))
         return Pos(xp, yp)
 
+    def draw_dot(self,pos):
+        p=self.trans(pos)
+        self.display.draw_point(p)
+
     def draw_ship(self,s):
         # Creates the body of the ship
         r = Rectangle(0, 0, 100, 100)
