@@ -13,8 +13,13 @@ import pygame as pg
 #todo draw path travelled by ships
 #todo needs logging badly
 
+#todo difference between primary and SOI body
+#todo if when projecting is not an ellipse, go through the chain of parent bodies
+#todo draw hyperbolic orbit
+#todo use go on rails for time rates bigger than a threshold
 
-DATA_FILE='data3'
+
+DATA_FILE='data'
 
 ZOOM_FACTOR = 25
 MOVE_FACTOR = 10
@@ -124,7 +129,6 @@ class Game(object):
                     p1=obj1.pos
                     p2=obj2.pos
                     d=p1.distance(p2)
-                    print("{:.2E}".format(d))
             elif cmd==DISPLAY:
                 dispnum=instr.pop(0)
                 id=instr.pop(0)
@@ -167,9 +171,9 @@ class Game(object):
                     xvel = float(items[5])
                     yvel = float(items[6])
                     vel=Vector(x=xvel,y=yvel)
-                    # todo add velocity vector in ship constructor
-                    s=Ship(self.SS.Sol,name,mass,Pos(x,y),vel)
-                    self.SS.ships.append(s)
+                    pos=Pos(x,y)
+                    s=Ship(name,mass,pos,vel)
+                    self.SS.add_ship(s)
                 else:
                     name=items[0]
                     mass=float(items[1])
@@ -300,7 +304,7 @@ class Game(object):
             self.dt = 1000/FPS # milliseconds per frame
             self.dt *= TIME_RATE[self.time_rate_index]
             self.dt /=1000 # convert to seconds
-            print(self.dt)
+            #print(self.dt)
 
             if self.time_rate_index!=0:
                 self.SS.update(self.dt)
