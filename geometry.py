@@ -160,6 +160,7 @@ class Vector(Pos):
 
     # Constructors
     # Pos
+    # start, end; creates a vector at the origin
     # x,y
     # magnitud+dir
     def __init__(self, **kwargs):
@@ -174,6 +175,14 @@ class Vector(Pos):
             else:
                 z = 0
             Pos.__init__(self, x, y, z)
+        elif 'start' and 'end' in kwargs:
+            start = kwargs['start']
+            end = kwargs['end']
+
+            x = end.x - start.x
+            y = end.y - start.y
+            z = end.z - start.z
+            Pos.__init__(self,x,y,z)
         else:
             mag = kwargs['magnitud']
             dir = kwargs['dir']

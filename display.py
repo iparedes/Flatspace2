@@ -214,6 +214,8 @@ class Display:
         p1=path.pop()
         while path:
             p2=path.pop()
+            print(p1)
+            print(p2)
             if self.belongs(p1.x,p1.y) or self.belongs(p2.x,p2.y):
                 pg.draw.line(self.screen, color, p1.coords(), p2.coords(), LINE_WIDTH)
             p1=p2

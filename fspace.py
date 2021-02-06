@@ -86,8 +86,9 @@ class Body:
     # it only accounts for one level of satellites. Probably should use the iterator here
     def update_pos(self,delta):
         self.time+=delta
-        if self.time>=self.orbit.T:
-            self.time=self.time%self.orbit.T
+        if self.orbit.e<1:
+            if self.time>=self.orbit.T:
+                self.time=self.time%self.orbit.T
         self.pos=self.orbit.get_pos_time(self.time)
         for s in self.satellites:
             s.update_pos(delta)
@@ -251,6 +252,20 @@ class Orbit():
         r=self.area
         t+="top:"+"{:.2e}".format(r.top)+", left:"+"{:.2e}".format(r.left)+", bottom:"+"{:.2e}".format(r.bottom)+", right:"+"{:.2e}".format(r.right)+"\n"
         return t
+
+    @property
+    def a(self):
+        return self.orbital_path.a
+
+    @property
+    def b(self):
+        return self.orbital_path.b
+
+    @property
+    def e(self):
+        return self.orbital_path.e
+
+
 
     @property
     def focus(self):
@@ -429,57 +444,55 @@ class SSystem:
         ship.primary=prim
         self.ships.append(ship)
 
-    # updates delta seconds
-    def update(self,delta,projection=False):
+    def update(self,delta):
         self.epoch+=delta
         if(self.epoch/86400>self.days):
             self.days+=1
 
-        # Planets and satellites go on rails, we can forecast
         for p in self.Sol.satellites:
             p.update_pos(delta)
 
-        # updates the SOI of ships
         for s in self.ships:
+            s.update_pos(delta)
             p=s.pos
-            prim = self.soi_body(p)
+            prim = self.Sol.soi_body(p)
             if prim != s.primary:
                 s.primary = prim
 
-        # if the delta is to big, we are more granular on the ship updates
-        # parameters here are:
-        #   threshold for the ship calculation
-        #   delta for the ship updates
-        if delta>=600 and not projection:
-            cont=0
-            while cont<=delta:
-                for s in self.ships:
-                    s.update_pos(10)
-                cont+=10
-        else:
-            for s in self.ships:
-                #print("Updating ship"+s.name)
-                s.update_pos(delta)
-                #print(s.pos)
 
-    # def soi_body(self,pos):
-    #     body=None
-    #     # finds if pos is under the SOI of a planet
-    #     for b in self.Sol.satellites:
-    #         d=pos.distance(b.pos)
-    #         if d<b.SOI:
-    #             body=b
-    #             break
-    #     if body:
-    #         # if found a planet, finds if pos is under the SOI of a satellite of the planet
-    #         for b in body.satellites:
-    #             d=pos.distance(b.pos)
-    #             if d<b.SOI:
-    #                 body=b
-    #                 break
+
+    # updates delta seconds
+    # def update(self,delta):
+    #     self.epoch+=delta
+    #     if(self.epoch/86400>self.days):
+    #         self.days+=1
+    #
+    #     # Planets and satellites go on rails, we can forecast
+    #     for p in self.Sol.satellites:
+    #         p.update_pos(delta)
+    #
+    #     # updates the SOI of ships
+    #     for s in self.ships:
+    #         p=s.pos
+    #         prim = self.Sol.soi_body(p)
+    #         if prim != s.primary:
+    #             s.primary = prim
+    #
+    #     # if the delta is to big, we are more granular on the ship updates
+    #     # parameters here are:
+    #     #   threshold for the ship calculation
+    #     #   delta for the ship updates
+    #     if delta>=600
+    #         cont=0
+    #         while cont<=delta:
+    #             for s in self.ships:
+    #                 s.update_pos(10)
+    #             cont+=10
     #     else:
-    #         body=self.Sol
-    #     return body
+    #         for s in self.ships:
+    #             #print("Updating ship"+s.name)
+    #             s.update_pos(delta)
+    #             #print(s.pos)
 
     # returns the body identified by ident
     def find(self,ident):
@@ -546,6 +559,7 @@ class Ship(Body):
             setattr(result, k, deepcopy(v, memo))
         return result
 
+    # every time that the primary body is updated, the orbit parameters are re-calculated
     @Body.primary.setter
     def primary(self,p):
         Body.primary.fset(self,p)
@@ -567,6 +581,54 @@ class Ship(Body):
             (a, b, ecc, peri, apo, incl)=self.orbital_params()
             self.orbit=Orbit(a=a,e=ecc,focus=self.primary,mu=G*self.primary.mass,incl=incl)
 
+    def orbital_params(self):
+        return self.orbital_params_new()
+
+    def orbital_params_new(self):
+        m=self.mass
+        # p momentum vector
+        p=m*self.velocity
+        # L angular momentum vector
+        r=Vector(start=self.primary.pos,end=self.pos)
+        L=r.cross_product(p)
+
+        k=m*self.primary.mass*G
+
+        # runit vector
+        dir=r.direction
+        runit=Vector(magnitud=1,dir=dir)
+
+        pL=p.cross_product(L)
+        mkr=(m*k)*runit
+
+        A=pL-mkr
+
+        Ascaled=A/(m*k)
+        ecc=Ascaled.magnitude
+
+        horizontal=Vector(pos=Pos(1,0))
+        incl=A.angle(horizontal)
+
+
+        # semi-major axis
+        # a = ( j * j ) / (G * m * | 1 - ecc^2 | )
+        j=r.cross_product(self.velocity)
+        jj=j.dot_product(j)
+        factor = abs(1 - (ecc ** 2))
+        denom=G*self.primary.mass*factor
+        a=jj/denom
+        b=a*math.sqrt(factor)
+        #print("b: "+str(b))
+
+        # c: distance from center to focus
+        c=a*ecc
+        peri=a-c
+        apo=a+c
+
+        return(a,b,ecc,peri,apo,incl)
+
+
+
 
     # From: https://github.com/cmaureir/python-kepler/blob/master/KeplerianOrbit.py
     # returns tupla with (all distance units in meters):
@@ -576,14 +638,17 @@ class Ship(Body):
     # peri: value of periapsis
     # apo: value of apoapsis
     # incl: orbit inclination (degrees)
-    def orbital_params(self):
+    def orbital_params_old(self):
         mu=self.primary.mass*G
 
         # angular momentum
         # j = r x v
+        # OjO pos should be calculated from the focus. In my examples, the focus is at 0,0 but
+        # that will not happen always
+        # probably need to rewrite the vector class
         posVector=Vector(pos=self.pos)
         jv=posVector.cross_product(self.velocity)
-        # Rung-Lez vector
+        # Runge-Lenz vector
         # e = { (v x j) / (G * m) }  - { r / |r| }
         tv=self.velocity.cross_product(jv)
         tv=tv/mu
